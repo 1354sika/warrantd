@@ -1,0 +1,2612 @@
+{
+  "spec": "warrant/1",
+  "section": "SPEC.md 4",
+  "now": "2026-09-12T04:00:00Z",
+  "scenarios": [
+    {
+      "name": "A/consistent-unfrozen",
+      "entries": [
+        {
+          "spec": "warrant/1",
+          "id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/warrant.authority.grant@1",
+            "actor": {
+              "id": "user:sikaq",
+              "kind": "human"
+            },
+            "subject": {
+              "id": "agent:pagediary",
+              "kind": "warrant.actor"
+            },
+            "action": {
+              "verb": "grant",
+              "args": {
+                "capability": "eda.component.value.set"
+              }
+            },
+            "expect": {
+              "granted": "yes"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "grant-0001",
+            "reserved": {},
+            "chain": {
+              "seq": 0,
+              "prev": ""
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "declare",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "a040a5e9130fdb340bd2f0a73d0d2ab07f751ed822c87a7cf7b88c35c672b4a5"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "70d34bd47ddc97351a6c9594b51f3c2d65d7fe5ecda111898390929a28295940"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/eda.component.value.set@1",
+            "actor": {
+              "id": "agent:pagediary",
+              "kind": "ai"
+            },
+            "subject": {
+              "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+              "kind": "eda.component"
+            },
+            "action": {
+              "verb": "set",
+              "args": {
+                "value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "expect": {
+              "observed_value": "2200",
+              "unit": "ohm"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "n-2200",
+            "reserved": {},
+            "chain": {
+              "seq": 1,
+              "prev": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "agent:pagediary",
+                "kind": "ai"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "declare",
+                "signer": "agent:pagediary",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "1c13ef2de712c4ea75b909bf6feebd7e45ba7b43075258ddaae501ffeed57239"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:8ba0586ed65750ca1481718985c740dd3342bb592d91e229ca8cc6c733a21d20",
+          "body": {
+            "kind": "observation",
+            "type": "warrant://types/warrant.observation@1",
+            "actor": {
+              "id": "verifier:multisim-x86",
+              "kind": "verifier"
+            },
+            "subject": {
+              "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "kind": "warrant.entry"
+            },
+            "observation": {
+              "method": "reopen.ms14:RLCValue",
+              "observed_at": "2026-09-12T04:00:00Z",
+              "tier": "C1",
+              "evidence": [
+                "out/demo_rc_lowpass_1kHz.ms14"
+              ],
+              "result": {
+                "observed_value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "parents": [
+              "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            ],
+            "nonce": "obs-2200",
+            "chain": {
+              "seq": 2,
+              "prev": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "verifier:multisim-x86",
+                "kind": "verifier"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T04:00:00Z",
+              "over": "sha256:8ba0586ed65750ca1481718985c740dd3342bb592d91e229ca8cc6c733a21d20",
+              "sig_payload": {
+                "entry": "sha256:8ba0586ed65750ca1481718985c740dd3342bb592d91e229ca8cc6c733a21d20",
+                "role": "declare",
+                "signer": "verifier:multisim-x86",
+                "signed_at": "2026-09-12T04:00:00Z"
+              },
+              "sig_input_sha256": "52b123895d79ee682306166f9da4e7a26c3da0e6f200f3ce7395d02ca83dc38c"
+            }
+          ]
+        }
+      ],
+      "labels": {
+        "claim": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+      },
+      "expect": {
+        "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25": "CONSISTENT"
+      },
+      "facts": [],
+      "facts_all": [
+        "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+      ]
+    },
+    {
+      "name": "A/frozen",
+      "entries": [
+        {
+          "spec": "warrant/1",
+          "id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/warrant.authority.grant@1",
+            "actor": {
+              "id": "user:sikaq",
+              "kind": "human"
+            },
+            "subject": {
+              "id": "agent:pagediary",
+              "kind": "warrant.actor"
+            },
+            "action": {
+              "verb": "grant",
+              "args": {
+                "capability": "eda.component.value.set"
+              }
+            },
+            "expect": {
+              "granted": "yes"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "grant-0001",
+            "reserved": {},
+            "chain": {
+              "seq": 0,
+              "prev": ""
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "declare",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "a040a5e9130fdb340bd2f0a73d0d2ab07f751ed822c87a7cf7b88c35c672b4a5"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "70d34bd47ddc97351a6c9594b51f3c2d65d7fe5ecda111898390929a28295940"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/eda.component.value.set@1",
+            "actor": {
+              "id": "agent:pagediary",
+              "kind": "ai"
+            },
+            "subject": {
+              "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+              "kind": "eda.component"
+            },
+            "action": {
+              "verb": "set",
+              "args": {
+                "value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "expect": {
+              "observed_value": "2200",
+              "unit": "ohm"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "n-2200",
+            "reserved": {},
+            "chain": {
+              "seq": 1,
+              "prev": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "agent:pagediary",
+                "kind": "ai"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "declare",
+                "signer": "agent:pagediary",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "1c13ef2de712c4ea75b909bf6feebd7e45ba7b43075258ddaae501ffeed57239"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "92e9b01f02f66cd93ea4de165bd3005fb161d2d105e14fed0a7937fc368a5034"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:8ba0586ed65750ca1481718985c740dd3342bb592d91e229ca8cc6c733a21d20",
+          "body": {
+            "kind": "observation",
+            "type": "warrant://types/warrant.observation@1",
+            "actor": {
+              "id": "verifier:multisim-x86",
+              "kind": "verifier"
+            },
+            "subject": {
+              "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "kind": "warrant.entry"
+            },
+            "observation": {
+              "method": "reopen.ms14:RLCValue",
+              "observed_at": "2026-09-12T04:00:00Z",
+              "tier": "C1",
+              "evidence": [
+                "out/demo_rc_lowpass_1kHz.ms14"
+              ],
+              "result": {
+                "observed_value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "parents": [
+              "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            ],
+            "nonce": "obs-2200",
+            "chain": {
+              "seq": 2,
+              "prev": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "verifier:multisim-x86",
+                "kind": "verifier"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T04:00:00Z",
+              "over": "sha256:8ba0586ed65750ca1481718985c740dd3342bb592d91e229ca8cc6c733a21d20",
+              "sig_payload": {
+                "entry": "sha256:8ba0586ed65750ca1481718985c740dd3342bb592d91e229ca8cc6c733a21d20",
+                "role": "declare",
+                "signer": "verifier:multisim-x86",
+                "signed_at": "2026-09-12T04:00:00Z"
+              },
+              "sig_input_sha256": "52b123895d79ee682306166f9da4e7a26c3da0e6f200f3ce7395d02ca83dc38c"
+            }
+          ]
+        }
+      ],
+      "labels": {
+        "claim": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+      },
+      "expect": {
+        "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25": "WARRANTED"
+      },
+      "facts": [
+        "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+      ],
+      "facts_all": [
+        "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+        "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+      ]
+    },
+    {
+      "name": "B/contradicted",
+      "entries": [
+        {
+          "spec": "warrant/1",
+          "id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/warrant.authority.grant@1",
+            "actor": {
+              "id": "user:sikaq",
+              "kind": "human"
+            },
+            "subject": {
+              "id": "agent:pagediary",
+              "kind": "warrant.actor"
+            },
+            "action": {
+              "verb": "grant",
+              "args": {
+                "capability": "eda.component.value.set"
+              }
+            },
+            "expect": {
+              "granted": "yes"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "grant-0001",
+            "reserved": {},
+            "chain": {
+              "seq": 0,
+              "prev": ""
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "declare",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "a040a5e9130fdb340bd2f0a73d0d2ab07f751ed822c87a7cf7b88c35c672b4a5"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "70d34bd47ddc97351a6c9594b51f3c2d65d7fe5ecda111898390929a28295940"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/eda.component.value.set@1",
+            "actor": {
+              "id": "agent:pagediary",
+              "kind": "ai"
+            },
+            "subject": {
+              "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+              "kind": "eda.component"
+            },
+            "action": {
+              "verb": "set",
+              "args": {
+                "value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "expect": {
+              "observed_value": "2200",
+              "unit": "ohm"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "n-2200",
+            "reserved": {},
+            "chain": {
+              "seq": 1,
+              "prev": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "agent:pagediary",
+                "kind": "ai"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "declare",
+                "signer": "agent:pagediary",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "1c13ef2de712c4ea75b909bf6feebd7e45ba7b43075258ddaae501ffeed57239"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:c436e86e229630993b421e5becf2d151f98c4c7d08f2d9fd8e280dcb1ec032cf",
+          "body": {
+            "kind": "observation",
+            "type": "warrant://types/warrant.observation@1",
+            "actor": {
+              "id": "verifier:multisim-x86",
+              "kind": "verifier"
+            },
+            "subject": {
+              "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "kind": "warrant.entry"
+            },
+            "observation": {
+              "method": "reopen.ms14:RLCValue",
+              "observed_at": "2026-09-12T04:00:00Z",
+              "tier": "C1",
+              "evidence": [
+                "out/demo_rc_lowpass_1kHz.ms14"
+              ],
+              "result": {
+                "observed_value": "1000",
+                "unit": "ohm"
+              }
+            },
+            "parents": [
+              "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            ],
+            "nonce": "obs-1000",
+            "chain": {
+              "seq": 2,
+              "prev": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "verifier:multisim-x86",
+                "kind": "verifier"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T04:00:00Z",
+              "over": "sha256:c436e86e229630993b421e5becf2d151f98c4c7d08f2d9fd8e280dcb1ec032cf",
+              "sig_payload": {
+                "entry": "sha256:c436e86e229630993b421e5becf2d151f98c4c7d08f2d9fd8e280dcb1ec032cf",
+                "role": "declare",
+                "signer": "verifier:multisim-x86",
+                "signed_at": "2026-09-12T04:00:00Z"
+              },
+              "sig_input_sha256": "af745a953ed2474d7eb9cc8f71e32f4b22a91583ada79229d5695b47f44e78e7"
+            }
+          ]
+        }
+      ],
+      "labels": {
+        "claim": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+      },
+      "expect": {
+        "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25": "CONTRADICTED"
+      },
+      "facts": [],
+      "facts_all": [
+        "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+      ]
+    },
+    {
+      "name": "B/freeze-cannot-override",
+      "entries": [
+        {
+          "spec": "warrant/1",
+          "id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/warrant.authority.grant@1",
+            "actor": {
+              "id": "user:sikaq",
+              "kind": "human"
+            },
+            "subject": {
+              "id": "agent:pagediary",
+              "kind": "warrant.actor"
+            },
+            "action": {
+              "verb": "grant",
+              "args": {
+                "capability": "eda.component.value.set"
+              }
+            },
+            "expect": {
+              "granted": "yes"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "grant-0001",
+            "reserved": {},
+            "chain": {
+              "seq": 0,
+              "prev": ""
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "declare",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "a040a5e9130fdb340bd2f0a73d0d2ab07f751ed822c87a7cf7b88c35c672b4a5"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "70d34bd47ddc97351a6c9594b51f3c2d65d7fe5ecda111898390929a28295940"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/eda.component.value.set@1",
+            "actor": {
+              "id": "agent:pagediary",
+              "kind": "ai"
+            },
+            "subject": {
+              "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+              "kind": "eda.component"
+            },
+            "action": {
+              "verb": "set",
+              "args": {
+                "value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "expect": {
+              "observed_value": "2200",
+              "unit": "ohm"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "n-2200",
+            "reserved": {},
+            "chain": {
+              "seq": 1,
+              "prev": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "agent:pagediary",
+                "kind": "ai"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "declare",
+                "signer": "agent:pagediary",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "1c13ef2de712c4ea75b909bf6feebd7e45ba7b43075258ddaae501ffeed57239"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "92e9b01f02f66cd93ea4de165bd3005fb161d2d105e14fed0a7937fc368a5034"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:c436e86e229630993b421e5becf2d151f98c4c7d08f2d9fd8e280dcb1ec032cf",
+          "body": {
+            "kind": "observation",
+            "type": "warrant://types/warrant.observation@1",
+            "actor": {
+              "id": "verifier:multisim-x86",
+              "kind": "verifier"
+            },
+            "subject": {
+              "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "kind": "warrant.entry"
+            },
+            "observation": {
+              "method": "reopen.ms14:RLCValue",
+              "observed_at": "2026-09-12T04:00:00Z",
+              "tier": "C1",
+              "evidence": [
+                "out/demo_rc_lowpass_1kHz.ms14"
+              ],
+              "result": {
+                "observed_value": "1000",
+                "unit": "ohm"
+              }
+            },
+            "parents": [
+              "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            ],
+            "nonce": "obs-1000",
+            "chain": {
+              "seq": 2,
+              "prev": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "verifier:multisim-x86",
+                "kind": "verifier"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T04:00:00Z",
+              "over": "sha256:c436e86e229630993b421e5becf2d151f98c4c7d08f2d9fd8e280dcb1ec032cf",
+              "sig_payload": {
+                "entry": "sha256:c436e86e229630993b421e5becf2d151f98c4c7d08f2d9fd8e280dcb1ec032cf",
+                "role": "declare",
+                "signer": "verifier:multisim-x86",
+                "signed_at": "2026-09-12T04:00:00Z"
+              },
+              "sig_input_sha256": "af745a953ed2474d7eb9cc8f71e32f4b22a91583ada79229d5695b47f44e78e7"
+            }
+          ]
+        }
+      ],
+      "labels": {
+        "claim": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+      },
+      "expect": {
+        "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25": "CONTRADICTED"
+      },
+      "facts": [],
+      "facts_all": [
+        "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+      ]
+    },
+    {
+      "name": "C0/insufficient",
+      "entries": [
+        {
+          "spec": "warrant/1",
+          "id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/warrant.authority.grant@1",
+            "actor": {
+              "id": "user:sikaq",
+              "kind": "human"
+            },
+            "subject": {
+              "id": "agent:pagediary",
+              "kind": "warrant.actor"
+            },
+            "action": {
+              "verb": "grant",
+              "args": {
+                "capability": "eda.component.value.set"
+              }
+            },
+            "expect": {
+              "granted": "yes"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "grant-0001",
+            "reserved": {},
+            "chain": {
+              "seq": 0,
+              "prev": ""
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "declare",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "a040a5e9130fdb340bd2f0a73d0d2ab07f751ed822c87a7cf7b88c35c672b4a5"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "70d34bd47ddc97351a6c9594b51f3c2d65d7fe5ecda111898390929a28295940"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/eda.component.value.set@1",
+            "actor": {
+              "id": "agent:pagediary",
+              "kind": "ai"
+            },
+            "subject": {
+              "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+              "kind": "eda.component"
+            },
+            "action": {
+              "verb": "set",
+              "args": {
+                "value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "expect": {
+              "observed_value": "2200",
+              "unit": "ohm"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "n-2200",
+            "reserved": {},
+            "chain": {
+              "seq": 1,
+              "prev": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "agent:pagediary",
+                "kind": "ai"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "declare",
+                "signer": "agent:pagediary",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "1c13ef2de712c4ea75b909bf6feebd7e45ba7b43075258ddaae501ffeed57239"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "92e9b01f02f66cd93ea4de165bd3005fb161d2d105e14fed0a7937fc368a5034"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:883c0ed0344e8890f196d951152daaff64c607be911359690fc98a0a144c36c9",
+          "body": {
+            "kind": "observation",
+            "type": "warrant://types/warrant.observation@1",
+            "actor": {
+              "id": "verifier:multisim-x86",
+              "kind": "verifier"
+            },
+            "subject": {
+              "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "kind": "warrant.entry"
+            },
+            "observation": {
+              "method": "reopen.ms14:RLCValue",
+              "observed_at": "2026-09-12T04:00:00Z",
+              "tier": "C0",
+              "evidence": [
+                "out/demo_rc_lowpass_1kHz.ms14"
+              ],
+              "result": {
+                "observed_value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "parents": [
+              "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            ],
+            "nonce": "obs-2200",
+            "chain": {
+              "seq": 2,
+              "prev": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "verifier:multisim-x86",
+                "kind": "verifier"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T04:00:00Z",
+              "over": "sha256:883c0ed0344e8890f196d951152daaff64c607be911359690fc98a0a144c36c9",
+              "sig_payload": {
+                "entry": "sha256:883c0ed0344e8890f196d951152daaff64c607be911359690fc98a0a144c36c9",
+                "role": "declare",
+                "signer": "verifier:multisim-x86",
+                "signed_at": "2026-09-12T04:00:00Z"
+              },
+              "sig_input_sha256": "476cc96f599c1ac340443030dc9025ac0462ff067a16d7bd30da259d89283f3a"
+            }
+          ]
+        }
+      ],
+      "labels": {
+        "claim": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+      },
+      "expect": {
+        "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25": "UNKNOWN"
+      },
+      "facts": [],
+      "facts_all": [
+        "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+      ]
+    },
+    {
+      "name": "D/observation-unknown",
+      "entries": [
+        {
+          "spec": "warrant/1",
+          "id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/warrant.authority.grant@1",
+            "actor": {
+              "id": "user:sikaq",
+              "kind": "human"
+            },
+            "subject": {
+              "id": "agent:pagediary",
+              "kind": "warrant.actor"
+            },
+            "action": {
+              "verb": "grant",
+              "args": {
+                "capability": "eda.component.value.set"
+              }
+            },
+            "expect": {
+              "granted": "yes"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "grant-0001",
+            "reserved": {},
+            "chain": {
+              "seq": 0,
+              "prev": ""
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "declare",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "a040a5e9130fdb340bd2f0a73d0d2ab07f751ed822c87a7cf7b88c35c672b4a5"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "70d34bd47ddc97351a6c9594b51f3c2d65d7fe5ecda111898390929a28295940"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/eda.component.value.set@1",
+            "actor": {
+              "id": "agent:pagediary",
+              "kind": "ai"
+            },
+            "subject": {
+              "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+              "kind": "eda.component"
+            },
+            "action": {
+              "verb": "set",
+              "args": {
+                "value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "expect": {
+              "observed_value": "2200",
+              "unit": "ohm"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "n-2200",
+            "reserved": {},
+            "chain": {
+              "seq": 1,
+              "prev": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "agent:pagediary",
+                "kind": "ai"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "declare",
+                "signer": "agent:pagediary",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "1c13ef2de712c4ea75b909bf6feebd7e45ba7b43075258ddaae501ffeed57239"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:fef5ebee95bfe1b64bef93561804affbcca89d9f5c38db0c42efdbf943293837",
+          "body": {
+            "kind": "observation",
+            "type": "warrant://types/warrant.observation@1",
+            "actor": {
+              "id": "verifier:multisim-x86",
+              "kind": "verifier"
+            },
+            "subject": {
+              "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "kind": "warrant.entry"
+            },
+            "observation": {
+              "method": "reopen.ms14:RLCValue",
+              "observed_at": "2026-09-12T04:00:00Z",
+              "tier": "C1",
+              "evidence": [
+                "out/demo_rc_lowpass_1kHz.ms14"
+              ]
+            },
+            "parents": [
+              "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            ],
+            "nonce": "obs-none",
+            "reason": "adapter exited before the result could be read",
+            "chain": {
+              "seq": 2,
+              "prev": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "verifier:multisim-x86",
+                "kind": "verifier"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T04:00:00Z",
+              "over": "sha256:fef5ebee95bfe1b64bef93561804affbcca89d9f5c38db0c42efdbf943293837",
+              "sig_payload": {
+                "entry": "sha256:fef5ebee95bfe1b64bef93561804affbcca89d9f5c38db0c42efdbf943293837",
+                "role": "declare",
+                "signer": "verifier:multisim-x86",
+                "signed_at": "2026-09-12T04:00:00Z"
+              },
+              "sig_input_sha256": "51161892619f1c51c32fea45fc0df525c64ca0260ac2b131651785cc00bc3a5f"
+            }
+          ]
+        }
+      ],
+      "labels": {
+        "claim": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+      },
+      "expect": {
+        "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25": "UNKNOWN"
+      },
+      "facts": [],
+      "facts_all": [
+        "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+      ]
+    },
+    {
+      "name": "E/proposed",
+      "entries": [
+        {
+          "spec": "warrant/1",
+          "id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/warrant.authority.grant@1",
+            "actor": {
+              "id": "user:sikaq",
+              "kind": "human"
+            },
+            "subject": {
+              "id": "agent:pagediary",
+              "kind": "warrant.actor"
+            },
+            "action": {
+              "verb": "grant",
+              "args": {
+                "capability": "eda.component.value.set"
+              }
+            },
+            "expect": {
+              "granted": "yes"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "grant-0001",
+            "reserved": {},
+            "chain": {
+              "seq": 0,
+              "prev": ""
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "declare",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "a040a5e9130fdb340bd2f0a73d0d2ab07f751ed822c87a7cf7b88c35c672b4a5"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "70d34bd47ddc97351a6c9594b51f3c2d65d7fe5ecda111898390929a28295940"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/eda.component.value.set@1",
+            "actor": {
+              "id": "agent:pagediary",
+              "kind": "ai"
+            },
+            "subject": {
+              "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+              "kind": "eda.component"
+            },
+            "action": {
+              "verb": "set",
+              "args": {
+                "value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "expect": {
+              "observed_value": "2200",
+              "unit": "ohm"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "n-2200",
+            "reserved": {},
+            "chain": {
+              "seq": 1,
+              "prev": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "agent:pagediary",
+                "kind": "ai"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "declare",
+                "signer": "agent:pagediary",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "1c13ef2de712c4ea75b909bf6feebd7e45ba7b43075258ddaae501ffeed57239"
+            }
+          ]
+        }
+      ],
+      "labels": {
+        "claim": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+      },
+      "expect": {
+        "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25": "PROPOSED"
+      },
+      "facts": [],
+      "facts_all": [
+        "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+      ]
+    },
+    {
+      "name": "F/unauthorized",
+      "entries": [
+        {
+          "spec": "warrant/1",
+          "id": "sha256:d5b5953535cf2dc0e93580b28f8943f8df4319eabd130a25953cb667d82295c5",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/eda.component.value.set@1",
+            "actor": {
+              "id": "agent:pagediary",
+              "kind": "ai"
+            },
+            "subject": {
+              "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+              "kind": "eda.component"
+            },
+            "action": {
+              "verb": "set",
+              "args": {
+                "value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "expect": {
+              "observed_value": "2200",
+              "unit": "ohm"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "sha256:dededededededededededededededededededededededededededededededede",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "n-2200",
+            "reserved": {},
+            "chain": {
+              "seq": 0,
+              "prev": ""
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "agent:pagediary",
+                "kind": "ai"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:d5b5953535cf2dc0e93580b28f8943f8df4319eabd130a25953cb667d82295c5",
+              "sig_payload": {
+                "entry": "sha256:d5b5953535cf2dc0e93580b28f8943f8df4319eabd130a25953cb667d82295c5",
+                "role": "declare",
+                "signer": "agent:pagediary",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "e678e5880d7d885258970e769beee3d992e15adb1db573cea782b053a59a432b"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:d99871b7d98a88ded6435f06abb51ba0310c3168c1884fbfe6afd030933781d0",
+          "body": {
+            "kind": "observation",
+            "type": "warrant://types/warrant.observation@1",
+            "actor": {
+              "id": "verifier:multisim-x86",
+              "kind": "verifier"
+            },
+            "subject": {
+              "id": "sha256:d5b5953535cf2dc0e93580b28f8943f8df4319eabd130a25953cb667d82295c5",
+              "kind": "warrant.entry"
+            },
+            "observation": {
+              "method": "reopen.ms14:RLCValue",
+              "observed_at": "2026-09-12T04:00:00Z",
+              "tier": "C1",
+              "evidence": [
+                "out/demo_rc_lowpass_1kHz.ms14"
+              ],
+              "result": {
+                "observed_value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "parents": [
+              "sha256:d5b5953535cf2dc0e93580b28f8943f8df4319eabd130a25953cb667d82295c5"
+            ],
+            "nonce": "obs-2200",
+            "chain": {
+              "seq": 1,
+              "prev": "sha256:d5b5953535cf2dc0e93580b28f8943f8df4319eabd130a25953cb667d82295c5"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "verifier:multisim-x86",
+                "kind": "verifier"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T04:00:00Z",
+              "over": "sha256:d99871b7d98a88ded6435f06abb51ba0310c3168c1884fbfe6afd030933781d0",
+              "sig_payload": {
+                "entry": "sha256:d99871b7d98a88ded6435f06abb51ba0310c3168c1884fbfe6afd030933781d0",
+                "role": "declare",
+                "signer": "verifier:multisim-x86",
+                "signed_at": "2026-09-12T04:00:00Z"
+              },
+              "sig_input_sha256": "07170dc3f1f69c67649b6553327c5068c9fbf119f7aa24ee7ba9405a8469ae36"
+            }
+          ]
+        }
+      ],
+      "labels": {
+        "claim": "sha256:d5b5953535cf2dc0e93580b28f8943f8df4319eabd130a25953cb667d82295c5"
+      },
+      "expect": {
+        "sha256:d5b5953535cf2dc0e93580b28f8943f8df4319eabd130a25953cb667d82295c5": "UNAUTHORIZED"
+      },
+      "facts": [],
+      "facts_all": []
+    },
+    {
+      "name": "G/expired",
+      "entries": [
+        {
+          "spec": "warrant/1",
+          "id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/warrant.authority.grant@1",
+            "actor": {
+              "id": "user:sikaq",
+              "kind": "human"
+            },
+            "subject": {
+              "id": "agent:pagediary",
+              "kind": "warrant.actor"
+            },
+            "action": {
+              "verb": "grant",
+              "args": {
+                "capability": "eda.component.value.set"
+              }
+            },
+            "expect": {
+              "granted": "yes"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "grant-0001",
+            "reserved": {},
+            "chain": {
+              "seq": 0,
+              "prev": ""
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "declare",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "a040a5e9130fdb340bd2f0a73d0d2ab07f751ed822c87a7cf7b88c35c672b4a5"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "70d34bd47ddc97351a6c9594b51f3c2d65d7fe5ecda111898390929a28295940"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:07460014fd885e4ef6d98f24b25c48827258845228be3acd2c48c1d6ca3493d9",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/eda.component.value.set@1",
+            "actor": {
+              "id": "agent:pagediary",
+              "kind": "ai"
+            },
+            "subject": {
+              "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+              "kind": "eda.component"
+            },
+            "action": {
+              "verb": "set",
+              "args": {
+                "value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "expect": {
+              "observed_value": "2200",
+              "unit": "ohm"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2026-09-12T03:30:00Z"
+            },
+            "parents": [],
+            "nonce": "n-2200",
+            "reserved": {},
+            "chain": {
+              "seq": 1,
+              "prev": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "agent:pagediary",
+                "kind": "ai"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:07460014fd885e4ef6d98f24b25c48827258845228be3acd2c48c1d6ca3493d9",
+              "sig_payload": {
+                "entry": "sha256:07460014fd885e4ef6d98f24b25c48827258845228be3acd2c48c1d6ca3493d9",
+                "role": "declare",
+                "signer": "agent:pagediary",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "13b831075fb7e00d317879acd30b32d925dc58a0a377572291e067b81501c87d"
+            }
+          ]
+        }
+      ],
+      "labels": {
+        "claim": "sha256:07460014fd885e4ef6d98f24b25c48827258845228be3acd2c48c1d6ca3493d9"
+      },
+      "expect": {
+        "sha256:07460014fd885e4ef6d98f24b25c48827258845228be3acd2c48c1d6ca3493d9": "EXPIRED"
+      },
+      "facts": [],
+      "facts_all": [
+        "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+      ]
+    },
+    {
+      "name": "H/superseded",
+      "entries": [
+        {
+          "spec": "warrant/1",
+          "id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/warrant.authority.grant@1",
+            "actor": {
+              "id": "user:sikaq",
+              "kind": "human"
+            },
+            "subject": {
+              "id": "agent:pagediary",
+              "kind": "warrant.actor"
+            },
+            "action": {
+              "verb": "grant",
+              "args": {
+                "capability": "eda.component.value.set"
+              }
+            },
+            "expect": {
+              "granted": "yes"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "grant-0001",
+            "reserved": {},
+            "chain": {
+              "seq": 0,
+              "prev": ""
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "declare",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "a040a5e9130fdb340bd2f0a73d0d2ab07f751ed822c87a7cf7b88c35c672b4a5"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "70d34bd47ddc97351a6c9594b51f3c2d65d7fe5ecda111898390929a28295940"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/eda.component.value.set@1",
+            "actor": {
+              "id": "agent:pagediary",
+              "kind": "ai"
+            },
+            "subject": {
+              "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+              "kind": "eda.component"
+            },
+            "action": {
+              "verb": "set",
+              "args": {
+                "value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "expect": {
+              "observed_value": "2200",
+              "unit": "ohm"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "n-2200",
+            "reserved": {},
+            "chain": {
+              "seq": 1,
+              "prev": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "agent:pagediary",
+                "kind": "ai"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "declare",
+                "signer": "agent:pagediary",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "1c13ef2de712c4ea75b909bf6feebd7e45ba7b43075258ddaae501ffeed57239"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:8f00cec54090fa04cde84276cfffaa4a1083da47cfbf4ffe0ae03aeebea06b72",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/eda.component.value.set@1",
+            "actor": {
+              "id": "agent:pagediary",
+              "kind": "ai"
+            },
+            "subject": {
+              "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+              "kind": "eda.component"
+            },
+            "action": {
+              "verb": "set",
+              "args": {
+                "value": "1000",
+                "unit": "ohm"
+              }
+            },
+            "expect": {
+              "observed_value": "1000",
+              "unit": "ohm"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "n-1000",
+            "reserved": {},
+            "supersedes": [
+              "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            ],
+            "chain": {
+              "seq": 2,
+              "prev": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "agent:pagediary",
+                "kind": "ai"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:8f00cec54090fa04cde84276cfffaa4a1083da47cfbf4ffe0ae03aeebea06b72",
+              "sig_payload": {
+                "entry": "sha256:8f00cec54090fa04cde84276cfffaa4a1083da47cfbf4ffe0ae03aeebea06b72",
+                "role": "declare",
+                "signer": "agent:pagediary",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "3eec794c71760c394c2ec5b916dd1ab56a64063c4a7ce6baca2545de4b9dc925"
+            }
+          ]
+        }
+      ],
+      "labels": {
+        "old": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+        "new": "sha256:8f00cec54090fa04cde84276cfffaa4a1083da47cfbf4ffe0ae03aeebea06b72"
+      },
+      "expect": {
+        "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25": "SUPERSEDED",
+        "sha256:8f00cec54090fa04cde84276cfffaa4a1083da47cfbf4ffe0ae03aeebea06b72": "PROPOSED"
+      },
+      "facts": [],
+      "facts_all": [
+        "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+      ]
+    },
+    {
+      "name": "I/rejected",
+      "entries": [
+        {
+          "spec": "warrant/1",
+          "id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/warrant.authority.grant@1",
+            "actor": {
+              "id": "user:sikaq",
+              "kind": "human"
+            },
+            "subject": {
+              "id": "agent:pagediary",
+              "kind": "warrant.actor"
+            },
+            "action": {
+              "verb": "grant",
+              "args": {
+                "capability": "eda.component.value.set"
+              }
+            },
+            "expect": {
+              "granted": "yes"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "grant-0001",
+            "reserved": {},
+            "chain": {
+              "seq": 0,
+              "prev": ""
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "declare",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "a040a5e9130fdb340bd2f0a73d0d2ab07f751ed822c87a7cf7b88c35c672b4a5"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "70d34bd47ddc97351a6c9594b51f3c2d65d7fe5ecda111898390929a28295940"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/eda.component.value.set@1",
+            "actor": {
+              "id": "agent:pagediary",
+              "kind": "ai"
+            },
+            "subject": {
+              "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+              "kind": "eda.component"
+            },
+            "action": {
+              "verb": "set",
+              "args": {
+                "value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "expect": {
+              "observed_value": "2200",
+              "unit": "ohm"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "n-2200",
+            "reserved": {},
+            "chain": {
+              "seq": 1,
+              "prev": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "agent:pagediary",
+                "kind": "ai"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "declare",
+                "signer": "agent:pagediary",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "1c13ef2de712c4ea75b909bf6feebd7e45ba7b43075258ddaae501ffeed57239"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "reject",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "reject",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z",
+                "reason": "wrong part chosen"
+              },
+              "sig_input_sha256": "5ff5413df576a0ff465c976eb8c37b4e785f1858312d65568bdfc2a1af0d5649",
+              "reason": "wrong part chosen"
+            }
+          ]
+        }
+      ],
+      "labels": {
+        "claim": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+      },
+      "expect": {
+        "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25": "REJECTED"
+      },
+      "facts": [],
+      "facts_all": [
+        "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+      ]
+    },
+    {
+      "name": "I/reject-beats-consistent",
+      "entries": [
+        {
+          "spec": "warrant/1",
+          "id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/warrant.authority.grant@1",
+            "actor": {
+              "id": "user:sikaq",
+              "kind": "human"
+            },
+            "subject": {
+              "id": "agent:pagediary",
+              "kind": "warrant.actor"
+            },
+            "action": {
+              "verb": "grant",
+              "args": {
+                "capability": "eda.component.value.set"
+              }
+            },
+            "expect": {
+              "granted": "yes"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "grant-0001",
+            "reserved": {},
+            "chain": {
+              "seq": 0,
+              "prev": ""
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "declare",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "a040a5e9130fdb340bd2f0a73d0d2ab07f751ed822c87a7cf7b88c35c672b4a5"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "freeze",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "sig_payload": {
+                "entry": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+                "role": "freeze",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "70d34bd47ddc97351a6c9594b51f3c2d65d7fe5ecda111898390929a28295940"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+          "body": {
+            "kind": "claim",
+            "type": "warrant://types/eda.component.value.set@1",
+            "actor": {
+              "id": "agent:pagediary",
+              "kind": "ai"
+            },
+            "subject": {
+              "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+              "kind": "eda.component"
+            },
+            "action": {
+              "verb": "set",
+              "args": {
+                "value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "expect": {
+              "observed_value": "2200",
+              "unit": "ohm"
+            },
+            "authority": {
+              "granted_by": "user:sikaq",
+              "grant_id": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2",
+              "kind": "explicit"
+            },
+            "scope": {
+              "valid_within": [
+                "org:local"
+              ],
+              "valid_across": []
+            },
+            "horizon": {
+              "issued_at": "2026-09-12T03:00:00Z",
+              "expires_at": "2030-01-01T00:00:00Z"
+            },
+            "parents": [],
+            "nonce": "n-2200",
+            "reserved": {},
+            "chain": {
+              "seq": 1,
+              "prev": "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "agent:pagediary",
+                "kind": "ai"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "declare",
+                "signer": "agent:pagediary",
+                "signed_at": "2026-09-12T03:00:00Z"
+              },
+              "sig_input_sha256": "1c13ef2de712c4ea75b909bf6feebd7e45ba7b43075258ddaae501ffeed57239"
+            },
+            {
+              "signer": {
+                "id": "user:sikaq",
+                "kind": "human"
+              },
+              "role": "reject",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T03:00:00Z",
+              "over": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "sig_payload": {
+                "entry": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+                "role": "reject",
+                "signer": "user:sikaq",
+                "signed_at": "2026-09-12T03:00:00Z",
+                "reason": "wrong part chosen"
+              },
+              "sig_input_sha256": "5ff5413df576a0ff465c976eb8c37b4e785f1858312d65568bdfc2a1af0d5649",
+              "reason": "wrong part chosen"
+            }
+          ]
+        },
+        {
+          "spec": "warrant/1",
+          "id": "sha256:8ba0586ed65750ca1481718985c740dd3342bb592d91e229ca8cc6c733a21d20",
+          "body": {
+            "kind": "observation",
+            "type": "warrant://types/warrant.observation@1",
+            "actor": {
+              "id": "verifier:multisim-x86",
+              "kind": "verifier"
+            },
+            "subject": {
+              "id": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25",
+              "kind": "warrant.entry"
+            },
+            "observation": {
+              "method": "reopen.ms14:RLCValue",
+              "observed_at": "2026-09-12T04:00:00Z",
+              "tier": "C1",
+              "evidence": [
+                "out/demo_rc_lowpass_1kHz.ms14"
+              ],
+              "result": {
+                "observed_value": "2200",
+                "unit": "ohm"
+              }
+            },
+            "parents": [
+              "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            ],
+            "nonce": "obs-2200",
+            "chain": {
+              "seq": 2,
+              "prev": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+            }
+          },
+          "signatures": [
+            {
+              "signer": {
+                "id": "verifier:multisim-x86",
+                "kind": "verifier"
+              },
+              "role": "declare",
+              "alg": "ed25519",
+              "key_id": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+              "sig": "",
+              "signed_at": "2026-09-12T04:00:00Z",
+              "over": "sha256:8ba0586ed65750ca1481718985c740dd3342bb592d91e229ca8cc6c733a21d20",
+              "sig_payload": {
+                "entry": "sha256:8ba0586ed65750ca1481718985c740dd3342bb592d91e229ca8cc6c733a21d20",
+                "role": "declare",
+                "signer": "verifier:multisim-x86",
+                "signed_at": "2026-09-12T04:00:00Z"
+              },
+              "sig_input_sha256": "52b123895d79ee682306166f9da4e7a26c3da0e6f200f3ce7395d02ca83dc38c"
+            }
+          ]
+        }
+      ],
+      "labels": {
+        "claim": "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25"
+      },
+      "expect": {
+        "sha256:a829386cad4435a28259da30419e54fc311eaef887db9202086e5fde9c902d25": "REJECTED"
+      },
+      "facts": [],
+      "facts_all": [
+        "sha256:880b978d7e4b445c601c505d2b2c30041e5c768de752f0457b635e3e3b8a50a2"
+      ]
+    }
+  ]
+}

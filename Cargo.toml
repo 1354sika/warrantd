@@ -1,0 +1,33 @@
+# warrantd —— 独立 workspace（开源包）
+#
+# 只含两个 crate：
+#   crates/warrant   —— 认定内核（纯库，只依赖基础库）
+#   crates/warrantd  —— 常驻观测者与账本（bin）
+#
+# 刻意不带任何 ZeroPage 的代码：warrantd 要能被别的智能体拿去用，
+# 拖进一个桌面应用的引擎就等于把它变成配件。
+
+[workspace]
+resolver = "2"
+members = ["crates/warrant", "crates/warrantd"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+rust-version = "1.85"
+
+[workspace.dependencies]
+sha2 = "0.10"
+unicode-normalization = "0.1"
+ed25519-dalek = "2"
+p256 = { version = "0.13", default-features = false, features = ["ecdsa"] }
+getrandom = "0.2"
+serde_json = { version = "1", features = ["preserve_order"] }
+
+warrant = { path = "crates/warrant" }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

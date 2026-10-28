@@ -1,0 +1,42 @@
+{
+  "spec": "warrant/1",
+  "section": "SPEC.md 2.4",
+  "domain_link": "77617272616e742f76312f6c696e6b00",
+  "records": [
+    {
+      "seq": 0,
+      "id": "sha256:ad34fcb57783bbae9307f154833ba0cb555c8f369b98de311fd52cd8df4a9b9d",
+      "chain": {
+        "seq": 0,
+        "prev": ""
+      },
+      "link": "134996dede8c024abefa2978c1321ea6ad910617d2ee45a7633258274e397b66"
+    },
+    {
+      "seq": 1,
+      "id": "sha256:8765535fe438b66379e94940a5d0b0d822db88bc551a0653b90b39d5b788ccca",
+      "chain": {
+        "seq": 1,
+        "prev": "sha256:ad34fcb57783bbae9307f154833ba0cb555c8f369b98de311fd52cd8df4a9b9d"
+      },
+      "link": "d6dba83f444bfe89280e1d12b7a6df4fdcb7dcfadc153a414c3ab37b2afc5223"
+    },
+    {
+      "seq": 2,
+      "id": "sha256:f131499815a040a00b04823e1446b6f8c41744239b5893f18e212b2e380cf16c",
+      "chain": {
+        "seq": 2,
+        "prev": "sha256:8765535fe438b66379e94940a5d0b0d822db88bc551a0653b90b39d5b788ccca"
+      },
+      "link": "7b6b8c4da7baf61f8842b40ed22509d2496c8b8f2b3bef5704513f71e27a699e"
+    }
+  ],
+  "tamper": {
+    "target_index": 1,
+    "field": "action.args.value",
+    "from": "2200",
+    "to": "1000",
+    "first_bad_index": 2,
+    "id_changed": true
+  }
+}

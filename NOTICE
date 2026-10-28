@@ -1,0 +1,39 @@
+warrantd
+Copyright 2026 the warrantd authors
+
+This software was developed as part of the ZeroPage project.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+---
+
+## Attribution（署名）
+
+Apache-2.0 第 4(d) 条要求：分发本软件或其衍生作品时，**必须保留本 NOTICE 文件的内容**。
+
+在此之上，作者**请求**（而非法律强制）：
+如果你在产品、服务或论文里用了它，请在其中注明「使用了 warrantd」，或在这个仓库开一个 issue 说明用途。
+
+> **为什么选 Apache-2.0，而不是能强制署名的许可**
+>
+> 曾经考虑过 **BSD-4-Clause**（它有一条规定：所有提到本软件功能的广告材料必须致谢）。
+> 它是唯一一个能**法律强制**"宣传时申明来源"的标准许可，但代价是：
+> 与 GPL 不兼容（FSF 明确不建议）、业界几乎绝迹（UC Berkeley 1999 年就删除了这一条）、
+> 而且只在「对方宣传这个功能时」才触发 —— 嵌入使用而不宣传就完全不必申明。
+>
+> 结论：**它给的强制力很窄，付出的代价很大。**
+> 而「让人愿意用」比「强制署名」更重要 —— 许可卡不住人，好用的东西才留得住人。
+>
+> 如果你确实需要**强制**署名，另一条路是双许可（Apache-2.0 + 商业许可，商业许可里约定署名）。
+> 本项目不采用。
+

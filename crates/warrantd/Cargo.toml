@@ -1,0 +1,25 @@
+[package]
+name = "warrantd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "常驻观测者与账本（独立于任何智能体）：观测白名单 + 只追加账本 + 三种切片"
+
+# [WARRANTD-2026-10-27] 依赖纪律（与 crates/warrant 同级）：
+# **只依赖 warrant + 通用基础库，禁止依赖任何执行层 crate（core/tools/mcp/...）**。
+# 理由：warrantd 要能被 ZeroPage 之外的智能体使用 ⇒ 它不能把 ZeroPage 的引擎拖进来。
+# 反向检查：`cargo tree -p warrantd` 不应出现 core。
+[dependencies]
+warrant.workspace = true
+sha2.workspace = true
+ed25519-dalek.workspace = true
+getrandom.workspace = true
+# [MCP-2026-10-27] **只给协议层用**（`mcp.rs`）：MCP 是外部协议，参数里可能有浮点，
+# 而 `warrant::json` 是严格档（按规范拒浮点）。两者分工不许混淆：
+#   账本 / 判据 → warrant::json（严格，规范要求）
+#   MCP 协议层  → serde_json（宽松，外部世界不由我们定）
+serde_json.workspace = true
+
+[[bin]]
+name = "warrantd"
+path = "src/main.rs"

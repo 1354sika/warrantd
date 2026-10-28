@@ -1,0 +1,233 @@
+{
+  "spec": "warrant/1",
+  "profile": "restricted-canonical-json",
+  "hash": "sha256",
+  "domain_id": "77617272616e742f76312f696400",
+  "domain_sign": "77617272616e742f76312f73696700",
+  "cases": [
+    {
+      "name": "eda/component-replaced",
+      "kind": "positive",
+      "body": {
+        "type": "warrant://types/eda.component.replaced@1",
+        "actor": {
+          "id": "agent:pagediary",
+          "kind": "ai"
+        },
+        "subject": {
+          "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1",
+          "kind": "eda.component"
+        },
+        "action": {
+          "verb": "replace",
+          "args": {
+            "part": "Master/Basic/RESISTOR/2.2k"
+          }
+        },
+        "observation": {
+          "method": "com.multisim.RLCValue",
+          "result": {
+            "observed_value": "1000",
+            "unit": "ohm"
+          },
+          "observed_at": "2026-09-10T11:52:00Z",
+          "observer": "adapter:multisim-x86"
+        },
+        "authority": {
+          "granted_by": "user:sikaq",
+          "grant_id": "seed-0001",
+          "kind": "explicit"
+        },
+        "scope": {
+          "valid_within": [
+            "org:local"
+          ],
+          "valid_across": []
+        },
+        "horizon": {
+          "issued_at": "2026-09-10T11:51:00Z",
+          "expires_at": "2026-09-10T12:00:00Z"
+        },
+        "parents": [
+          "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        ],
+        "nonce": "n-0001"
+      },
+      "canonical": "{\"action\":{\"args\":{\"part\":\"Master/Basic/RESISTOR/2.2k\"},\"verb\":\"replace\"},\"actor\":{\"id\":\"agent:pagediary\",\"kind\":\"ai\"},\"authority\":{\"grant_id\":\"seed-0001\",\"granted_by\":\"user:sikaq\",\"kind\":\"explicit\"},\"horizon\":{\"expires_at\":\"2026-09-10T12:00:00Z\",\"issued_at\":\"2026-09-10T11:51:00Z\"},\"nonce\":\"n-0001\",\"observation\":{\"method\":\"com.multisim.RLCValue\",\"observed_at\":\"2026-09-10T11:52:00Z\",\"observer\":\"adapter:multisim-x86\",\"result\":{\"observed_value\":\"1000\",\"unit\":\"ohm\"}},\"parents\":[\"sha256:0000000000000000000000000000000000000000000000000000000000000000\"],\"scope\":{\"valid_across\":[],\"valid_within\":[\"org:local\"]},\"subject\":{\"id\":\"eda://circuit/demo_rc_lowpass_1kHz/component/R1\",\"kind\":\"eda.component\"},\"type\":\"warrant://types/eda.component.replaced@1\"}",
+      "canonical_sha256": "09eb6967fc48b1971504408fac2f18ba05967f09a1a382e765c21bca91260a56",
+      "sig_input_sha256": "330a90d374bb9597ca797fbbc4c6142f05379bfc2413034dddb117ccc787d4d9",
+      "id": "sha256:94d1ce1c0ac0a06813765f1ae81130ff963f3b4e9ac97bcb35b9aaab61d89691"
+    },
+    {
+      "name": "eda/component-replaced-keyorder",
+      "kind": "positive",
+      "body": {
+        "nonce": "n-0001",
+        "parents": [
+          "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        ],
+        "horizon": {
+          "expires_at": "2026-09-10T12:00:00Z",
+          "issued_at": "2026-09-10T11:51:00Z"
+        },
+        "scope": {
+          "valid_across": [],
+          "valid_within": [
+            "org:local"
+          ]
+        },
+        "authority": {
+          "kind": "explicit",
+          "grant_id": "seed-0001",
+          "granted_by": "user:sikaq"
+        },
+        "observation": {
+          "observer": "adapter:multisim-x86",
+          "observed_at": "2026-09-10T11:52:00Z",
+          "result": {
+            "unit": "ohm",
+            "observed_value": "1000"
+          },
+          "method": "com.multisim.RLCValue"
+        },
+        "action": {
+          "args": {
+            "part": "Master/Basic/RESISTOR/2.2k"
+          },
+          "verb": "replace"
+        },
+        "subject": {
+          "kind": "eda.component",
+          "id": "eda://circuit/demo_rc_lowpass_1kHz/component/R1"
+        },
+        "actor": {
+          "kind": "ai",
+          "id": "agent:pagediary"
+        },
+        "type": "warrant://types/eda.component.replaced@1"
+      },
+      "canonical": "{\"action\":{\"args\":{\"part\":\"Master/Basic/RESISTOR/2.2k\"},\"verb\":\"replace\"},\"actor\":{\"id\":\"agent:pagediary\",\"kind\":\"ai\"},\"authority\":{\"grant_id\":\"seed-0001\",\"granted_by\":\"user:sikaq\",\"kind\":\"explicit\"},\"horizon\":{\"expires_at\":\"2026-09-10T12:00:00Z\",\"issued_at\":\"2026-09-10T11:51:00Z\"},\"nonce\":\"n-0001\",\"observation\":{\"method\":\"com.multisim.RLCValue\",\"observed_at\":\"2026-09-10T11:52:00Z\",\"observer\":\"adapter:multisim-x86\",\"result\":{\"observed_value\":\"1000\",\"unit\":\"ohm\"}},\"parents\":[\"sha256:0000000000000000000000000000000000000000000000000000000000000000\"],\"scope\":{\"valid_across\":[],\"valid_within\":[\"org:local\"]},\"subject\":{\"id\":\"eda://circuit/demo_rc_lowpass_1kHz/component/R1\",\"kind\":\"eda.component\"},\"type\":\"warrant://types/eda.component.replaced@1\"}",
+      "canonical_sha256": "09eb6967fc48b1971504408fac2f18ba05967f09a1a382e765c21bca91260a56",
+      "sig_input_sha256": "330a90d374bb9597ca797fbbc4c6142f05379bfc2413034dddb117ccc787d4d9",
+      "id": "sha256:94d1ce1c0ac0a06813765f1ae81130ff963f3b4e9ac97bcb35b9aaab61d89691"
+    },
+    {
+      "name": "eda/simulation-completed",
+      "kind": "positive",
+      "body": {
+        "type": "warrant://types/eda.simulation.completed@1",
+        "actor": {
+          "id": "agent:pagediary",
+          "kind": "ai"
+        },
+        "subject": {
+          "id": "eda://circuit/demo_rc_lowpass_1kHz",
+          "kind": "eda.circuit"
+        },
+        "action": {
+          "verb": "run",
+          "args": {
+            "analysis": "ac",
+            "sweep": "dec 10 1 1e6"
+          }
+        },
+        "observation": {
+          "method": "file.netlist.txt",
+          "result": {
+            "exit_code": 0,
+            "bytes": 645
+          },
+          "observed_at": "2026-09-10T11:53:00Z",
+          "observer": "adapter:multisim-x86"
+        },
+        "authority": {
+          "granted_by": "user:sikaq",
+          "grant_id": "seed-0002",
+          "kind": "explicit"
+        },
+        "scope": {
+          "valid_within": [
+            "org:local"
+          ],
+          "valid_across": []
+        },
+        "horizon": {
+          "issued_at": "2026-09-10T11:53:00Z",
+          "expires_at": "2026-09-10T11:58:00Z"
+        },
+        "parents": [],
+        "nonce": "n-0002"
+      },
+      "canonical": "{\"action\":{\"args\":{\"analysis\":\"ac\",\"sweep\":\"dec 10 1 1e6\"},\"verb\":\"run\"},\"actor\":{\"id\":\"agent:pagediary\",\"kind\":\"ai\"},\"authority\":{\"grant_id\":\"seed-0002\",\"granted_by\":\"user:sikaq\",\"kind\":\"explicit\"},\"horizon\":{\"expires_at\":\"2026-09-10T11:58:00Z\",\"issued_at\":\"2026-09-10T11:53:00Z\"},\"nonce\":\"n-0002\",\"observation\":{\"method\":\"file.netlist.txt\",\"observed_at\":\"2026-09-10T11:53:00Z\",\"observer\":\"adapter:multisim-x86\",\"result\":{\"bytes\":645,\"exit_code\":0}},\"parents\":[],\"scope\":{\"valid_across\":[],\"valid_within\":[\"org:local\"]},\"subject\":{\"id\":\"eda://circuit/demo_rc_lowpass_1kHz\",\"kind\":\"eda.circuit\"},\"type\":\"warrant://types/eda.simulation.completed@1\"}",
+      "canonical_sha256": "8455f9f20de75442070c14956cef7a449fa624c74a0364d80be991534a40f756",
+      "sig_input_sha256": "b1b57adc9673b8ee4674ee657ad26f7851de43b8fc7328d4b40bf37a6c64228a",
+      "id": "sha256:adeb28ebd85006c34f0bbb1a5769e456b0b0d52b64940de198aeeffeb75bf073"
+    },
+    {
+      "name": "canon/nfc-equivalent",
+      "kind": "positive",
+      "body": {
+        "type": "warrant://types/test.cafe@1",
+        "note": "café",
+        "other": "café",
+        "n": 0,
+        "parents": []
+      },
+      "canonical": "{\"n\":0,\"note\":\"café\",\"other\":\"café\",\"parents\":[],\"type\":\"warrant://types/test.cafe@1\"}",
+      "canonical_sha256": "0f8fb9edf754b7403c8fb336ef4f57c3403e42d022e9253d006c80aced23482c",
+      "sig_input_sha256": "9248d17724a4aa7c34f6a623336636389a2a029faa362f731d8335f4eed10d64",
+      "id": "sha256:6cf5932092d2071b6ad66203810bb2edd4f61fb6787f96add18068afcb6ea788"
+    },
+    {
+      "name": "canon/int64-boundary",
+      "kind": "positive",
+      "body": {
+        "type": "warrant://types/test.bounds@1",
+        "value": 9223372036854775807,
+        "delta": -9223372036854775808,
+        "parents": []
+      },
+      "canonical": "{\"delta\":-9223372036854775808,\"parents\":[],\"type\":\"warrant://types/test.bounds@1\",\"value\":9223372036854775807}",
+      "canonical_sha256": "85d9db4c2ea15182408580c9d447df15de55112bd5a410e3e53cd746da1a549b",
+      "sig_input_sha256": "bdc1b72450713e44fa9a43f96eab2ba917aee7091430c1ec2d5d32682120e666",
+      "id": "sha256:65157e02ca4cb0c12a359cd0c5bac1f3f3cb3159c72d04bef62b8df63a8ce8af"
+    },
+    {
+      "name": "canon/controls-and-escapes",
+      "kind": "positive",
+      "body": {
+        "type": "warrant://types/test.escapes@1",
+        "s": "line1\nline2\ttab\"quote\\slash/\u0001ctl",
+        "parents": []
+      },
+      "canonical": "{\"parents\":[],\"s\":\"line1\\nline2\\ttab\\\"quote\\\\slash/\\u0001ctl\",\"type\":\"warrant://types/test.escapes@1\"}",
+      "canonical_sha256": "94728597cf69709b91bc0b641d90e58ab4d7374562ba5d93ae5ab783d3f1f712",
+      "sig_input_sha256": "3f3b9080a204cb56ebfda38e7dadc13496157f68f50167d6b54033c322a77f0a",
+      "id": "sha256:bb2eeafa9d755c87262cef1ebcde070bf6deb58c5b977dc8c219820bbc635214"
+    },
+    {
+      "name": "neg/float",
+      "kind": "negative",
+      "json": "{\"type\":\"warrant://types/t@1\",\"gain\":2.2,\"parents\":[]}",
+      "reason": "float 在规范档中被禁止"
+    },
+    {
+      "name": "neg/dup-key-after-nfc",
+      "kind": "negative",
+      "json": "{\"type\":\"warrant://types/t@1\",\"caf\\u00e9\":1,\"cafe\\u0301\":2,\"parents\":[]}",
+      "reason": "NFC 归一化后键重复"
+    },
+    {
+      "name": "neg/int64-overflow",
+      "kind": "negative",
+      "json": "{\"type\":\"warrant://types/t@1\",\"v\":9223372036854775808}",
+      "reason": "整数超出 signed 64-bit"
+    },
+    {
+      "name": "neg/trailing-junk",
+      "kind": "negative",
+      "json": "{\"type\":\"warrant://types/t@1\",\"parents\":[]} tail",
+      "reason": "非单值 JSON 文档"
+    }
+  ]
+}

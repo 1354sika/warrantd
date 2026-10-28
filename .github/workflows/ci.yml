@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # 说明：Windows 是主目标平台（账本互斥用 share_mode(0)）。
+        # Ubuntu 也跑，是为了尽早发现编译/可移植问题 ——
+        # 但 Linux 上的账本锁尚未实现，多进程并发写在 Linux 上不安全（见 README「它不做什么」）。
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build
+        run: cargo build --all --verbose
+      - name: Test
+        run: cargo test --all --verbose
+
+  fmt-clippy:
+    name: fmt & clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install stable --profile minimal --component rustfmt,clippy && rustup default stable
+      - name: rustfmt
+        run: cargo fmt --all -- --check
+      - name: clippy
+        # 两个 doc lint 明确豁免：它们是「文档注释续行缩进」的格式偏好，不是缺陷。
+        # 这些注释里大量是中文说明 + 引号结构，强行改成 clippy 期望的缩进会降低可读性。
+        # 豁免写在这里而不是代码里，是为了让「我们有意放行」这件事有据可查。
+        run: >-
+          cargo clippy --all -- -D warnings
+          -A clippy::doc_lazy_continuation
+          -A clippy::doc_overindented_list_items
