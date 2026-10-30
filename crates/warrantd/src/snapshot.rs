@@ -67,11 +67,7 @@ pub fn snapshot_path(repo: &Path) -> PathBuf {
 pub fn load(repo: &Path) -> Option<Snapshot> {
     let text = std::fs::read_to_string(snapshot_path(repo)).ok()?;
     let v = warrant::json::parse(&text).ok()?;
-    let at = v
-        .get("at")
-        .and_then(|x| x.as_str())
-        .unwrap_or("")
-        .to_string();
+    let at = v.get("at").and_then(|x| x.as_str()).unwrap_or("").to_string();
     let mut files = BTreeMap::new();
     if let Some(Value::Object(pairs)) = v.get("files") {
         for (k, vv) in pairs {
@@ -94,12 +90,7 @@ pub fn load(repo: &Path) -> Option<Snapshot> {
 pub fn save(repo: &Path, snap: &Snapshot) -> Result<(), String> {
     let dir = repo.join(crate::LEDGER_DIR);
     std::fs::create_dir_all(&dir).map_err(|e| format!("create {}: {e}", dir.display()))?;
-    let mtimes = Value::Object(
-        snap.mtimes
-            .iter()
-            .map(|(k, v)| (k.clone(), Value::Int(*v)))
-            .collect(),
-    );
+    let mtimes = Value::Object(snap.mtimes.iter().map(|(k, v)| (k.clone(), Value::Int(*v))).collect());
     let v = obj(vec![
         ("at", s(&snap.at)),
         ("files", crate::probe::hash_map_json(&snap.files)),
@@ -111,10 +102,18 @@ pub fn save(repo: &Path, snap: &Snapshot) -> Result<(), String> {
 }
 
 pub fn scan(repo: &Path, rels: &[String]) -> Result<Snapshot, String> {
+    // [WINDOW-2026-10-28] `at` 取在**扫描完成之后**，不是开始之前。
+    //
+    // 为什么：`at` 现在是「这条快照覆盖到哪一刻」的右端点。若取开始时刻，
+    // 下一次巡边的 window_from（= 本次 at）会早于本次的 window_to ⇒ **窗口重叠**，
+    // 于是「这段时间里变了几次」这类问题会被重复计数。
+    // 放在最后求值，保证窗口首尾相接：[T0, T1] [T1, T2] …
+    let files = crate::probe::scan_hashes(repo, rels)?;
+    let mtimes = crate::probe::mtimes_of(repo, rels);
     Ok(Snapshot {
+        files,
+        mtimes,
         at: now_rfc3339(),
-        files: crate::probe::scan_hashes(repo, rels)?,
-        mtimes: crate::probe::mtimes_of(repo, rels),
     })
 }
 
@@ -201,10 +200,7 @@ mod tests {
     fn snap(pairs: &[(&str, &str)]) -> Snapshot {
         Snapshot {
             at: "t".into(),
-            files: pairs
-                .iter()
-                .map(|(a, b)| (a.to_string(), b.to_string()))
-                .collect(),
+            files: pairs.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect(),
             mtimes: BTreeMap::new(),
         }
     }
@@ -260,10 +256,7 @@ mod tests {
     #[test]
     fn first_scan_is_baseline_not_flood() {
         let new = snap(&[("a.rs", "sha256:1"), ("b.rs", "sha256:2")]);
-        assert!(
-            diff(None, &new).is_empty(),
-            "首扫必须只建基线，不能把整个仓库报成 added"
-        );
+        assert!(diff(None, &new).is_empty(), "首扫必须只建基线，不能把整个仓库报成 added");
     }
 
     #[test]

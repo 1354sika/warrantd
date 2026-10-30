@@ -158,10 +158,7 @@ impl Observed {
         let d = decl(method);
         Self {
             method: method.to_string(),
-            tier: d
-                .map(|x| x.tier)
-                .unwrap_or(crate::DECLARED_TIER)
-                .to_string(),
+            tier: d.map(|x| x.tier).unwrap_or(crate::DECLARED_TIER).to_string(),
             tier_hint: d.map(|x| x.tier_hint).unwrap_or("C1").to_string(),
             channel: crate::CHANNEL.to_string(),
             observed_at: now_rfc3339(),
@@ -258,14 +255,14 @@ fn is_external_peer(addr: &str) -> bool {
     }
     let low = a.to_ascii_lowercase();
     for p in [
-        "127.",    // IPv4 回环
-        "0.0.0.0", // IPv4 通配
-        "[::1]",   // IPv6 回环（带方括号）
-        "[::]",    // IPv6 通配（带方括号）
-        "::1",     // IPv6 回环（裸）
-        "::",      // IPv6 通配（裸）
+        "127.",          // IPv4 回环
+        "0.0.0.0",       // IPv4 通配
+        "[::1]",         // IPv6 回环（带方括号）
+        "[::]",          // IPv6 通配（带方括号）
+        "::1",           // IPv6 回环（裸）
+        "::",            // IPv6 通配（裸）
         "localhost",
-        "*:", // ss 输出的通配
+        "*:",            // ss 输出的通配
     ] {
         if low.starts_with(p) {
             return false;
@@ -289,8 +286,7 @@ pub fn run_net_conns(full: bool) -> Result<Observed, String> {
     let listing = if cfg!(windows) {
         run_cmd(Path::new("."), "netstat", &["-ano"])?
     } else {
-        run_cmd(Path::new("."), "ss", &["-tun"])
-            .or_else(|_| run_cmd(Path::new("."), "netstat", &["-tun"]))?
+        run_cmd(Path::new("."), "ss", &["-tun"]).or_else(|_| run_cmd(Path::new("."), "netstat", &["-tun"]))?
     };
     let mut peers: Vec<String> = Vec::new();
     let mut total = 0usize;
@@ -300,11 +296,7 @@ pub fn run_net_conns(full: bool) -> Result<Observed, String> {
             continue;
         }
         // netstat -ano: TCP  <local>  <remote>  <state>  <pid>；ss: 协议 State Recv-Q Send-Q Local Peer
-        let remote = if cfg!(windows) {
-            cols.get(2)
-        } else {
-            cols.last()
-        };
+        let remote = if cfg!(windows) { cols.get(2) } else { cols.last() };
         if let Some(r) = remote {
             if r.contains(':') && !r.starts_with("Local") && !r.starts_with("Peer") {
                 total += 1;
@@ -376,13 +368,9 @@ pub fn run_vcs_remote(repo: &Path) -> Result<Observed, String> {
         ob.evidence = vec!["这个分支没有设置上游（没有可比的远端）".to_string()];
         return Ok(ob);
     }
-    let counts = run_cmd(
-        repo,
-        "git",
-        &["rev-list", "--left-right", "--count", "HEAD...@{u}"],
-    )
-    .map(|x| x.trim().to_string())
-    .unwrap_or_default();
+    let counts = run_cmd(repo, "git", &["rev-list", "--left-right", "--count", "HEAD...@{u}"])
+        .map(|x| x.trim().to_string())
+        .unwrap_or_default();
     let (ahead, behind) = {
         let mut it = counts.split_whitespace();
         let a = it.next().and_then(|x| x.parse::<i64>().ok()).unwrap_or(0);
@@ -461,13 +449,7 @@ pub fn fingerprint_of(dir: &Path, budget: &mut usize) -> (String, bool) {
             h.update(e.as_bytes());
             h.update(b"\n");
         }
-        format!(
-            "sha256:{}",
-            h.finalize()
-                .iter()
-                .map(|b| format!("{:02x}", b))
-                .collect::<String>()
-        )
+        format!("sha256:{}", h.finalize().iter().map(|b| format!("{:02x}", b)).collect::<String>())
     };
     let bytes: u64 = entries
         .iter()
@@ -507,18 +489,11 @@ pub fn run_dir_fingerprint(root: &Path, dirs: &[String]) -> Result<Observed, Str
     for rel in dirs {
         let p = abs(root, rel);
         if !p.is_dir() {
-            return Err(format!(
-                "{} 不是目录（dir.fingerprint 只接受目录）",
-                p.display()
-            ));
+            return Err(format!("{} 不是目录（dir.fingerprint 只接受目录）", p.display()));
         }
         let (fp, truncated) = fingerprint_of(&p, &mut budget);
         pairs.push((rel.clone(), s(&fp)));
-        let tail = if truncated {
-            "（已截断：超出条目预算）"
-        } else {
-            ""
-        };
+        let tail = if truncated { "（已截断：超出条目预算）" } else { "" };
         evidence.push(format!("{}{fp}{tail}", p.display()));
     }
     let mut ob = Observed::new("dir.fingerprint", Value::Object(pairs));
@@ -552,9 +527,9 @@ pub fn ignore_rules(repo: &Path) -> Vec<String> {
 /// 路径是否被 ignore 规则覆盖（前缀匹配，`dir:` 前缀会先剥掉）。
 pub fn is_ignored(path: &str, rules: &[String]) -> bool {
     let p = path.strip_prefix("dir:").unwrap_or(path);
-    rules
-        .iter()
-        .any(|r| p == r || p.starts_with(&format!("{r}/")) || p.starts_with(&format!("{r}\\")))
+    rules.iter().any(|r| {
+        p == r || p.starts_with(&format!("{r}/")) || p.starts_with(&format!("{r}\\"))
+    })
 }
 
 /// `vcs.state` —— git 自产的量。**这是第三方软件自己报的**，不是我们算的。
@@ -609,10 +584,7 @@ pub fn run_port_table() -> Result<Observed, String> {
         .lines()
         .filter(|l| {
             let t = l.trim();
-            !t.is_empty()
-                && !t.starts_with("Active")
-                && !t.starts_with("Proto")
-                && !t.starts_with("活动")
+            !t.is_empty() && !t.starts_with("Active") && !t.starts_with("Proto") && !t.starts_with("活动")
         })
         .count() as i64;
     let result = obj(vec![("net.connections", Value::Int(n))]);
@@ -625,11 +597,7 @@ pub fn run_port_table() -> Result<Observed, String> {
 ///
 /// **唯一会写盘的原语**：必须 `allow_side_effects = true`，且它造成的变化记进
 /// `self_side_effects`，**不算世界的变更**。
-pub fn run_build_test(
-    cwd: &Path,
-    cmdline: &str,
-    allow_side_effects: bool,
-) -> Result<Observed, String> {
+pub fn run_build_test(cwd: &Path, cmdline: &str, allow_side_effects: bool) -> Result<Observed, String> {
     let d = decl("build.test").expect("build.test 必须在白名单里");
     if !d.read_only && !allow_side_effects {
         return Err(format!(
@@ -680,11 +648,7 @@ pub fn run(id: &str, root: &Path, arg: &str, allow_side_effects: bool) -> Result
             "「{other}」不在观测白名单里（{}）—— warrantd 结构上做不到任意命令观测。\
              这是自洽性要求，不是配置项。可用：{}",
             crate::PROBE_SPEC_VERSION,
-            WHITELIST
-                .iter()
-                .map(|d| d.id)
-                .collect::<Vec<_>>()
-                .join(", ")
+            WHITELIST.iter().map(|d| d.id).collect::<Vec<_>>().join(", ")
         )),
     }
 }
@@ -712,10 +676,7 @@ pub fn whitelist_json() -> Value {
 ///
 /// 与 [`run`] 的区别：这里只做 `fs.hash` 这一类**只读**观测，且结果直接是
 /// `path -> sha256`，供 [`crate::snapshot::diff`] 使用。
-pub fn scan_hashes(
-    root: &Path,
-    rels: &[String],
-) -> Result<std::collections::BTreeMap<String, String>, String> {
+pub fn scan_hashes(root: &Path, rels: &[String]) -> Result<std::collections::BTreeMap<String, String>, String> {
     use sha2::{Digest, Sha256};
     let mut out = std::collections::BTreeMap::new();
     let mut budget = FINGERPRINT_MAX_ENTRIES;
@@ -731,10 +692,7 @@ pub fn scan_hashes(
         }
         match std::fs::read(&p) {
             Ok(bytes) => {
-                let hex: String = Sha256::digest(&bytes)
-                    .iter()
-                    .map(|b| format!("{:02x}", b))
-                    .collect();
+                let hex: String = Sha256::digest(&bytes).iter().map(|b| format!("{:02x}", b)).collect();
                 out.insert(rel.clone(), format!("sha256:{hex}"));
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -748,10 +706,7 @@ pub fn scan_hashes(
     // 这条是为了堵住「agent 往 ignore 里加一行就把自己的改动藏起来」这个洞。
     let ign = root.join(crate::LEDGER_DIR).join("ignore");
     if let Ok(bytes) = std::fs::read(&ign) {
-        let hex: String = Sha256::digest(&bytes)
-            .iter()
-            .map(|b| format!("{:02x}", b))
-            .collect();
+        let hex: String = Sha256::digest(&bytes).iter().map(|b| format!("{:02x}", b)).collect();
         out.insert("special:ignore".to_string(), format!("sha256:{hex}"));
     }
     Ok(out)
@@ -805,10 +760,7 @@ pub fn sha256_file(p: &Path) -> Option<String> {
     let bytes = std::fs::read(p).ok()?;
     Some(format!(
         "sha256:{}",
-        Sha256::digest(&bytes)
-            .iter()
-            .map(|b| format!("{:02x}", b))
-            .collect::<String>()
+        Sha256::digest(&bytes).iter().map(|b| format!("{:02x}", b)).collect::<String>()
     ))
 }
 
@@ -824,31 +776,15 @@ mod tests {
         // 每条都要有 id/tier/desc，且 tier 与申报一致（P5 要求逐字相等）
         for d in WHITELIST {
             assert!(!d.id.is_empty() && !d.desc.is_empty());
-            assert_eq!(
-                d.tier,
-                crate::DECLARED_TIER,
-                "{} 的申报档必须等于 capability 申报值",
-                d.id
-            );
+            assert_eq!(d.tier, crate::DECLARED_TIER, "{} 的申报档必须等于 capability 申报值", d.id);
         }
     }
 
     #[test]
     fn only_build_test_has_side_effects() {
-        let writers: Vec<&str> = WHITELIST
-            .iter()
-            .filter(|d| !d.read_only)
-            .map(|d| d.id)
-            .collect();
-        assert_eq!(
-            writers,
-            vec!["build.test"],
-            "只有 build.test 允许写盘；新增写盘原语必须改这条断言"
-        );
-        assert!(
-            !decl("build.test").unwrap().writes.is_empty(),
-            "有副作用就必须申报写什么"
-        );
+        let writers: Vec<&str> = WHITELIST.iter().filter(|d| !d.read_only).map(|d| d.id).collect();
+        assert_eq!(writers, vec!["build.test"], "只有 build.test 允许写盘；新增写盘原语必须改这条断言");
+        assert!(!decl("build.test").unwrap().writes.is_empty(), "有副作用就必须申报写什么");
     }
 
     #[test]
@@ -906,10 +842,7 @@ mod tests {
         let mut budget = 1usize; // 预算只够 1 条 ⇒ 必然截断
         let (fp, truncated) = fingerprint_of(&d, &mut budget);
         assert!(truncated, "预算不够时必须报告截断");
-        assert!(
-            fp.contains("truncated"),
-            "截断必须写在指纹里，不能隐藏：{fp}"
-        );
+        assert!(fp.contains("truncated"), "截断必须写在指纹里，不能隐藏：{fp}");
         let _ = std::fs::remove_dir_all(&d);
     }
 
@@ -929,20 +862,10 @@ mod tests {
     /// [NET-2026-10-28] 外部对端判定：**回环/通配必须排除，否则"有一条连接"永远报变化**。
     #[test]
     fn external_peer_filter_excludes_loopback_and_wildcards() {
-        for local in [
-            "127.0.0.1:5000",
-            "0.0.0.0:0",
-            "[::]:443",
-            "[::1]:8080",
-            "localhost:3000",
-        ] {
+        for local in ["127.0.0.1:5000", "0.0.0.0:0", "[::]:443", "[::1]:8080", "localhost:3000"] {
             assert!(!is_external_peer(local), "本机地址不该算外部对端：{local}");
         }
-        for ext in [
-            "93.184.216.34:443",
-            "[2606:2800:220:1::1]:443",
-            "140.82.121.4:22",
-        ] {
+        for ext in ["93.184.216.34:443", "[2606:2800:220:1::1]:443", "140.82.121.4:22"] {
             assert!(is_external_peer(ext), "外部地址必须被算进来：{ext}");
         }
     }
@@ -962,10 +885,7 @@ mod tests {
         let rules = vec!["target".to_string(), "node_modules".to_string()];
         assert!(is_ignored("target/", &rules));
         assert!(is_ignored("target/debug/x", &rules));
-        assert!(
-            is_ignored("dir:target", &rules),
-            "目录项（dir: 前缀）也要匹配"
-        );
+        assert!(is_ignored("dir:target", &rules), "目录项（dir: 前缀）也要匹配");
         assert!(!is_ignored("targetfoo/a", &rules), "前缀不能当成子串匹配");
         assert!(!is_ignored("src/target.rs", &rules));
     }

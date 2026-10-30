@@ -20,6 +20,11 @@ getrandom.workspace = true
 #   MCP 协议层  → serde_json（宽松，外部世界不由我们定）
 serde_json.workspace = true
 
+# [WATCH-2026-10-29] 文件事件（洞⑤）：把「有变化」从「等下一轮定时扫」变成「立刻知道」。
+# **只用于提前唤醒** —— 扫仍是快照差分、每轮仍最多一条世界变更，
+# 所以上了 watcher 账本也不会变多（见 src/watch.rs 文件头）。
+notify = "6"
+
 [[bin]]
 name = "warrantd"
 path = "src/main.rs"

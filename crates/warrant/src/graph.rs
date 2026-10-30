@@ -154,12 +154,8 @@ impl EvidenceGraph {
         match self.nodes.iter().position(|n| n == node) {
             None => 0,
             Some(i) => {
-                let mut outs: Vec<usize> = self
-                    .edges
-                    .iter()
-                    .filter(|(f, _)| *f == i)
-                    .map(|(_, t)| *t)
-                    .collect();
+                let mut outs: Vec<usize> =
+                    self.edges.iter().filter(|(f, _)| *f == i).map(|(_, t)| *t).collect();
                 outs.sort();
                 outs.dedup();
                 outs.len()
@@ -253,7 +249,7 @@ impl EvidenceGraph {
 }
 
 fn words(n: usize) -> usize {
-    n.div_ceil(64)
+    (n + 63) / 64
 }
 
 /// 布尔矩阵乘（位并行）：C[i] = OR over set bits k in P[i] of A[k]。
@@ -329,11 +325,7 @@ mod tests {
         let es = vec![grant("g"), claim("c1", "g"), obs("o1", "c1")];
         let gph = build(&es);
         assert_eq!(gph.fanout("o1"), 1, "观测支撑其 claim");
-        assert_eq!(
-            gph.fanout("g"),
-            1,
-            "grant 支撑其 claim（parents/authority 去重）"
-        );
+        assert_eq!(gph.fanout("g"), 1, "grant 支撑其 claim（parents/authority 去重）");
         assert_eq!(gph.fanout("c1"), 0, "观测的 parents 不建反向边（防伪环）");
         assert!(gph.is_acyclic());
         assert!(gph.cyclic_nodes().is_empty());
@@ -382,11 +374,7 @@ mod tests {
             1,
             "第 {chain_len} 枚 grant 仍恒深 1（授权不是依据）"
         );
-        assert_eq!(
-            g.depth_of("c"),
-            2,
-            "claim 深度 = grant + 1 = 2，与授权链长度无关"
-        );
+        assert_eq!(g.depth_of("c"), 2, "claim 深度 = grant + 1 = 2，与授权链长度无关");
         // 深度方向：边 = 依据 → 结论；观测是**源**（obs → claim），故 obs 深 1。
         assert_eq!(g.depth_of("o"), 1, "观测为源（obs → claim），恒深 1");
         // 关键：新 claim 不再越限 ⇒ X-DEPTH 不再拦（这里就是 admission 的判据来源）。
@@ -400,20 +388,11 @@ mod tests {
 
     #[test]
     fn fanout_counts_distinct_conclusions_and_over_limit_is_recorded() {
-        let es = vec![
-            grant("g"),
-            claim("c1", "g"),
-            claim("c2", "g"),
-            claim("c3", "g"),
-        ];
+        let es = vec![grant("g"), claim("c1", "g"), claim("c2", "g"), claim("c3", "g")];
         let gph = build(&es);
         assert_eq!(gph.fanout("g"), 3);
         assert_eq!(gph.max_fanout(), Some(("g".to_string(), 3)));
-        assert_eq!(
-            gph.over_limit(2),
-            vec![("g".to_string(), 3)],
-            "超限必须被记录"
-        );
+        assert_eq!(gph.over_limit(2), vec![("g".to_string(), 3)], "超限必须被记录");
         assert!(gph.over_limit(D_MAX).is_empty(), "未超 D_MAX 不记录");
     }
 

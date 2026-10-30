@@ -45,14 +45,30 @@ impl SweepOutcome {
 
 /// 巡边一次。
 pub fn sweep(repo: &Path, watch: &[String]) -> Result<SweepOutcome, String> {
+    sweep_with_events(repo, watch, &Default::default())
+}
+
+/// 带事件计数的巡边（`[JITTER-2026-10-29]`）。
+///
+/// `event_counts` 来自 watcher：本窗口内每个路径被碰了几次。
+/// **它不影响「记几条」** —— 每轮仍然最多一条世界变更，计数只是随附信息。
+pub fn sweep_with_events(
+    repo: &Path,
+    watch: &[String],
+    event_counts: &std::collections::HashMap<String, usize>,
+) -> Result<SweepOutcome, String> {
     let mut st = store::Store::open(repo)?;
     let old = snapshot::load(repo);
+    // 窗口左端 = 上次快照覆盖到的那一刻；首扫为空（无基线）
+    let window_from = old.as_ref().map(|s| s.at.clone()).unwrap_or_default();
     let new = snapshot::scan(repo, watch)?;
+    // 窗口右端 = 本次扫描完成的时刻（与 Snapshot.at 同源，保证首尾相接）
+    let window_to = new.at.clone();
     let changes = snapshot::diff(old.as_ref(), &new);
     let claim = if changes.is_empty() {
         String::new()
     } else {
-        let cid = st.append_world_change(&changes, watch.len())?;
+        let cid = st.append_world_change(&changes, watch.len(), &window_from, &window_to, event_counts)?;
         // 观测条目指向这条 claim：result 与 claim.expect 同形 ⇒ 切片① 直接判 consistent。
         // 语义诚实：这条观测**确实看到了**它自己声明的那批变更（同一次 scan 的产物）。
         let ob = Observed {
@@ -82,11 +98,16 @@ pub fn sweep(repo: &Path, watch: &[String]) -> Result<SweepOutcome, String> {
         cid
     };
     snapshot::save(repo, &new)?;
+    // [SEAL-2026-10-29] 自动封卷：当前卷超过阈值就挪走，让「当前卷」保持小。
+    // 失败**不阻断**巡边（封卷是维护动作，不该让观测停摆）—— 但状态里会照实报条数。
+    if st.entries().len() >= crate::SEAL_AFTER {
+        let _ = st.seal();
+    }
     Ok(SweepOutcome {
         scanned: watch.len(),
         changes: changes.len(),
         claim,
-        offset: st.offset(),
+        offset: st.logical_offset(),
         snapshot_at: new.at,
     })
 }
@@ -199,6 +220,45 @@ pub fn world_change_count(entries: &[warrant::ledger::Entry]) -> usize {
 mod tests {
     use super::*;
 
+    /// **[JITTER-2026-10-29] 事件次数必须进账本。**
+    ///
+    /// 这条钉子守的是「快照差分之外的那点信息」：快照只知道最后长什么样，
+    /// 改了又改回来就只剩 `touched`；而 watcher 数出来的次数能把
+    /// 「改了一次」和「改了 17 次」分开 —— 后者通常意味着在反复试错。
+    ///
+    /// 注意：**次数不影响写几条**。这条世界变更仍然只有一条，计数是随附信息。
+    #[test]
+    fn jitter_counts_are_recorded_in_world_change() {
+        let d = tmp("jitter");
+        std::fs::write(d.join("a.txt"), b"1").unwrap();
+        let _ = sweep(&d, &["a.txt".to_string()]).unwrap(); // 基线
+        std::fs::write(d.join("a.txt"), b"22").unwrap();
+
+        let mut counts = std::collections::HashMap::new();
+        counts.insert("a.txt".to_string(), 7usize);
+        let _ = sweep_with_events(&d, &["a.txt".to_string()], &counts).unwrap();
+
+        let st = crate::store::Store::open(&d).unwrap();
+        let entry = st
+            .entries()
+            .iter()
+            .rev()
+            .find(|e| {
+                e.body.get("type").and_then(|x| x.as_str())
+                    == Some(crate::store::T_WORLD_CHANGE)
+            })
+            .expect("应有一条世界变更");
+        let got = entry
+            .body
+            .get("action")
+            .and_then(|a| a.get("args"))
+            .and_then(|a| a.get("event_counts"))
+            .and_then(|c| c.get("a.txt"))
+            .and_then(|v| v.as_int());
+        assert_eq!(got, Some(7), "事件次数必须写进 action.args.event_counts");
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
     fn tmp(tag: &str) -> std::path::PathBuf {
         let d = std::env::temp_dir().join(format!("warrantd-sweep-{}-{}", tag, std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
@@ -250,6 +310,42 @@ mod tests {
         assert_eq!(human_age(300), "5 分钟");
         assert_eq!(human_age(18034), "5 小时");
         assert_eq!(human_age(200_000), "2 天");
+    }
+
+    /// **[WINDOW-2026-10-28] 窗口必须首尾相接，不能重叠。**
+    ///
+    /// 这条钉子的价值：如果 `Snapshot.at` 取在扫描**之前**，那么第 N+1 次的 window_from
+    /// 会早于第 N 次的 window_to ⇒ 窗口重叠 ⇒ 「这段时间变了几次」被重复计数。
+    /// 真机上我们正是把 at 挪到扫描**完成之后**才修好的。
+    #[test]
+    fn windows_are_adjacent_and_never_overlap() {
+        let d = tmp("window");
+        std::fs::write(d.join("a.txt"), b"1").unwrap();
+        let _ = sweep(&d, &["a.txt".to_string()]).unwrap(); // 首扫建基线，无变更
+        std::fs::write(d.join("a.txt"), b"22").unwrap();
+        let _ = sweep(&d, &["a.txt".to_string()]).unwrap();
+        std::fs::write(d.join("a.txt"), b"333").unwrap();
+        let _ = sweep(&d, &["a.txt".to_string()]).unwrap();
+
+        let st = crate::store::Store::open(&d).unwrap();
+        let ws = crate::slices::world_changes(st.entries());
+        assert_eq!(ws.len(), 2, "两次变化应各写一条世界变更");
+
+        // 第 1 条：from = 上一次快照的时刻（首扫虽有快照但没有变更、不写条目 ⇒ from 不为空）
+        assert!(
+            !ws[0].1.is_empty(),
+            "第一次有变化的巡边，window_from 应是上一次快照的时刻"
+        );
+        assert!(!ws[0].2.is_empty(), "window_to 必须有值");
+
+        // 第 2 条：from 必须**恰好等于**上一条的 to（首尾相接）
+        assert_eq!(
+            ws[1].1, ws[0].2,
+            "窗口重叠了：下一次的 from 应等于上一次的 to"
+        );
+        // RFC3339 的字典序 == 时间序
+        assert!(ws[1].2 >= ws[1].1, "window_to 不得早于 window_from");
+        let _ = std::fs::remove_dir_all(&d);
     }
 
     #[test]

@@ -223,7 +223,7 @@ warrantd admit
 | 项 | 数值 | 怎么验 |
 |---|---|---|
 | 观测原语 | **9 条**（封闭白名单） | `warrantd probes` |
-| 单元测试 | **106 passed** | `cargo test --all` |
+| 单元测试 | **112 passed** | `cargo test --all` |
 | release 体积 | **1.48 MB** 单文件，无可执行依赖 | `cargo build --release` |
 | MCP 工具 | **5 个** | 挂进 Claude Code / Cursor 看工具表 |
 | 真机·网络对端 | **338 个连接 / 90 个外部对端** | `warrantd probe net.conns` |
@@ -231,6 +231,9 @@ warrantd admit
 | 真机·抖动 | 改了又改回来（哈希相同）⇒ 报 **touched** | `warrantd once` |
 | 真机·并发写 | **5 个 writer 同时写，链完整** | `warrantd verify` |
 | 真机·自检不自欺 | 评两次，账本 offset **一分不涨** | `warrantd admit` |
+| 真机·时间分辨率 | `--interval 30` 下改文件，**2 秒内**发现（文件事件） | `warrantd open --interval 30` |
+| 真机·抖动计数 | 连改 5 次 ⇒ `event_counts: {"a.txt":5}`，仍只 1 条变更 | `warrantd daemon` |
+| 真机·封卷 | 5000 条/卷，旧卷挪进 `volumes/`，谱系靠 `parents` 相连 | `warrantd seal` / `verify --all` |
 
 ---
 
@@ -244,9 +247,11 @@ warrantd admit
 3. **最高等级 L3 也不等于全覆盖。** 只覆盖本地文件 + **配置里包过 proxy 的** MCP。
    shell 直接跑命令、没包 proxy 的 server，都在外面。
 4. **目录指纹只到 C0。** 它证明「这个目录变了」，不证明「哪个文件变成了什么」。
-5. **mtime 只能发现「被碰过」。** 改了又改回来能看见，但中间改了几次、每次是什么，看不见。
+5. **知道「改了几次」，不知道「每次改成什么」。** 文件事件会数次数（`event_counts`），
+   但存不下每一份中间内容 —— 那要按次存 diff，是另一个量级的存储。
 6. **网络只看到对端地址。** 不知道传了什么内容 —— 那是抓包，属结构性做不到。
 7. **账本关着的时候看不到。** 信使没运行，世界照样在变；下次打开只能和上次快照比。
+   文件事件也一样 —— 它只在 `warrantd` 运行时有效。
 8. **Linux 上的账本锁未实现。** 多进程并发写在 Linux 不安全（Windows 用独占打开）。
 9. **只有自测，没有第三方可复现的成绩。** 我们没有公开数据集上的结果 ——
    所以「比别的工具准」这句话，现在**说不起**。

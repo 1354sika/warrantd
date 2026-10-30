@@ -28,6 +28,7 @@ pub mod slices;
 pub mod snapshot;
 pub mod store;
 pub mod sweep;
+pub mod watch;
 pub mod ui;
 pub mod util;
 
@@ -36,6 +37,12 @@ pub const PROBE_SPEC_VERSION: &str = "warrantd.probe/1";
 
 /// 账本目录（相对项目根）。
 pub const LEDGER_DIR: &str = ".warrant";
+
+/// 当前卷超过这么多条就**自动封卷**（[SEAL-2026-10-29]）。
+///
+/// 为什么是 5000：一条约 1.2 KB ⇒ 一卷约 6 MB；`open` 全量读约 0.34 ms/条 ⇒ 单次 ≈ 1.7 秒。
+/// 再往上就明显影响每轮巡边了。封卷不删数据（挪进 `volumes/`），只是让「当前卷」保持小。
+pub const SEAL_AFTER: usize = 5000;
 
 /// 本 daemon 的记账身份。观测条目必须由 `verifier` 签
 /// （`crates/warrant/src/admission.rs:20`：`("observation","declare") => ["verifier"]`）。

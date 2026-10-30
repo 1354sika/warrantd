@@ -72,10 +72,7 @@ type R<T> = Result<T, JsonError>;
 
 /// 解析**单个** JSON 文档；尾部有多余内容即拒绝。
 pub fn parse(text: &str) -> R<Value> {
-    let mut p = Parser {
-        b: text.as_bytes(),
-        i: 0,
-    };
+    let mut p = Parser { b: text.as_bytes(), i: 0 };
     p.skip_ws();
     let v = p.value()?;
     p.skip_ws();
@@ -92,10 +89,7 @@ struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn err(&self, msg: &str) -> JsonError {
-        JsonError {
-            at: self.i,
-            msg: msg.to_string(),
-        }
+        JsonError { at: self.i, msg: msg.to_string() }
     }
 
     fn peek(&self) -> Option<u8> {

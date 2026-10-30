@@ -116,7 +116,18 @@ fn acquire_lock_n(dir: &Path, attempts: u32) -> Result<LedgerLock, String> {
     ))
 }
 
-/// 读账本并做全部结构校验。**链或签名不过 ⇒ Err，不静默接受**（篡改必须被看见）。
+/// 读账本并校验**链**（**不验签**）。
+///
+/// **[PERF-2026-10-29] 为什么这里不再验签**：
+/// 每次 `append` 都要重读全账本，而验签是 ed25519（约 50 μs/条）。
+/// 实测（release）：151 条时单条追加已 **49 ms**，1 万条会到 **3.3 秒** ——
+/// 「账本越用越慢」的根因就在这一行。
+///
+/// **链校验很便宜**（字符串 + 哈希比对），保留；
+/// **验签是事后审计的职责**，由 [`Store::verify`]（`warrantd verify` / `status`）全量执行。
+///
+/// 分工是有意的：**写路径只需「接得上」，读路径才关心「签名对不对」。**
+/// 追加时不需要证明历史全对，只需要知道上一条的 id。
 fn read_entries(dir: &Path) -> Result<Vec<ledger::Entry>, String> {
     let path = dir.join("entries.jsonl");
     if !path.exists() {
@@ -132,12 +143,205 @@ fn read_entries(dir: &Path) -> Result<Vec<ledger::Entry>, String> {
             errs.join("; ")
         ));
     }
-    let bad = ledger::verify_signatures(&entries);
-    if !bad.is_empty() {
-        return Err(format!("账本签名无效（tamper?）：{}", bad.join("; ")));
-    }
     Ok(entries)
 }
+
+/// 把所有卷按顺序拼成一个列表：`volumes/vol-*.jsonl`（文件名序）然后当前卷。
+///
+/// `[SEAL-2026-10-29]` 封卷后 `since` 默认只看当前卷 —— 问「三个月前」就落空。
+/// 这个函数把各卷串起来供 `--all` 使用。
+///
+/// **下标即全局序号**：拼接后的第 `i` 条就是逻辑 offset `i` 对应的条目，
+/// 所以 `since(logical_offset)` 可以直接在这个列表上切片。
+///
+/// 注意：各卷的 `chain.seq` 都从 0 开始，拼起来后 seq **不连续** —— 这是预期行为，
+/// 卷内链完好、卷间靠 `parents` 相连，不要用拼接结果去跑 `verify_chain`。
+pub fn all_entries(repo: &Path) -> Result<Vec<ledger::Entry>, String> {
+    let dir = repo.join(crate::LEDGER_DIR);
+    let mut vols: Vec<PathBuf> = Vec::new();
+    if let Ok(rd) = std::fs::read_dir(dir.join(VOLUMES)) {
+        for e in rd.flatten() {
+            let p = e.path();
+            if p.extension().and_then(|x| x.to_str()) == Some("jsonl") {
+                vols.push(p);
+            }
+        }
+    }
+    vols.sort();
+    let mut out: Vec<ledger::Entry> = Vec::new();
+    for v in vols.iter().chain(std::iter::once(&dir.join("entries.jsonl"))) {
+        if let Ok(text) = std::fs::read_to_string(v) {
+            if let Ok(mut es) = ledger::load_jsonl(&text) {
+                out.append(&mut es);
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// 验**所有卷** + **卷间谱系**。
+///
+/// **[SEAL-2026-10-29]** 单卷 verify 只能证明「这一卷自己没断」；
+/// 封过卷之后还必须证明「这一卷接得上上一卷」，否则归档就等于断案。
+///
+/// 谱系判据：本卷首条必须带 `parents`，且其中一项等于**上一卷最后一条的 id**。
+/// 首卷（bootstrap）没有上一卷，跳过。
+///
+/// 返回 `(卷清单, 错误)` —— 卷清单给 `--all` 打印，错误为空才算通过。
+pub fn verify_all(repo: &Path) -> Result<(Vec<(String, usize)>, Vec<String>), String> {
+    let dir = repo.join(crate::LEDGER_DIR);
+    let mut vols: Vec<PathBuf> = Vec::new();
+    if let Ok(rd) = std::fs::read_dir(dir.join(VOLUMES)) {
+        for e in rd.flatten() {
+            let p = e.path();
+            if p.extension().and_then(|x| x.to_str()) == Some("jsonl") {
+                vols.push(p);
+            }
+        }
+    }
+    vols.sort();
+    let mut list: Vec<(String, usize)> = Vec::new();
+    let mut errs: Vec<String> = Vec::new();
+    let mut prev_head = String::new();
+    let mut prev_name = String::new();
+
+    for v in vols.iter().chain(std::iter::once(&dir.join("entries.jsonl"))) {
+        let text = match std::fs::read_to_string(v) {
+            Ok(t) => t,
+            Err(e) => {
+                errs.push(format!("{}: 读不到（{e}）", v.display()));
+                continue;
+            }
+        };
+        if text.trim().is_empty() {
+            continue;
+        }
+        let entries = match ledger::load_jsonl(&text) {
+            Ok(e) => e,
+            Err(e) => {
+                errs.push(format!("{}: 解析失败（{e}）", v.display()));
+                continue;
+            }
+        };
+        let name = v
+            .file_name()
+            .map(|x| x.to_string_lossy().to_string())
+            .unwrap_or_default();
+        let mut e1 = ledger::verify_chain(&entries);
+        e1.extend(ledger::verify_signatures(&entries));
+        for e in &e1 {
+            errs.push(format!("{name}: {e}"));
+        }
+        // 谱系：本卷首条必须指向上一卷的 head（首卷没有上一卷，跳过）
+        if !prev_head.is_empty() {
+            let points_here = entries[0]
+                .body
+                .get("parents")
+                .and_then(|p| p.as_array())
+                .map(|a| a.iter().any(|x| x.as_str() == Some(prev_head.as_str())))
+                .unwrap_or(false);
+            if !points_here {
+                errs.push(format!(
+                    "{name}: 首条没有指向上一卷（{prev_name}）的 head —— 谱系断了，归档不可作证"
+                ));
+            }
+        }
+        prev_head = entries.last().map(|e| e.id.clone()).unwrap_or_default();
+        prev_name = name.clone();
+        list.push((name, entries.len()));
+    }
+    Ok((list, errs))
+}
+
+/// 增量刷新 entries：**没变就不动，只变长就只解析新行，变短才全量重读**。
+///
+/// **[PERF-2026-10-29] 这是把「每次写入 O(N²)」压回 O(1) 的关键。**
+///
+/// 原来的 `with_write` 每次都 `read_entries`（解析全部 + 全量验链），
+/// 于是 N 次写 = O(N²)：release 实测 151 条时单条 37 ms，1 万条到秒级。
+///
+/// 现在按字节位置续读，并对**新增部分**做等价于 `verify_chain` 的三条检查
+/// （id 对 body / seq 连续 / prev 接得上）。旧的部分已经验过，不重复验 ——
+/// 但**变短就一定全量重读**，绝不沿用记忆。
+///
+/// 读半行怎么办：并发写还没写完最后一行时，只消费到**最后一个换行**，
+/// 剩下的留到下次（宁可不读，也不把半行当条目）。
+///
+/// 返回：新增条目里最后一条 grant 的 id（没有则 `None`）。
+fn refresh_entries(
+    dir: &Path,
+    entries: &mut Vec<ledger::Entry>,
+    cursor: &mut u64,
+) -> Result<Option<String>, String> {
+    let path = dir.join("entries.jsonl");
+    let len = match std::fs::metadata(&path) {
+        Ok(m) => m.len(),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            entries.clear();
+            *cursor = 0;
+            return Ok(None);
+        }
+        Err(e) => return Err(format!("stat entries: {e}")),
+    };
+    if len == *cursor {
+        return Ok(None); // 没变 —— O(1)
+    }
+    if len < *cursor {
+        // 变短：被截断或归档。不能沿用内存里的条目，必须全量重读。
+        *entries = read_entries(dir)?;
+        *cursor = len;
+        return Ok(None);
+    }
+    use std::io::{Read as _, Seek as _, SeekFrom};
+    let mut f = std::fs::File::open(&path).map_err(|e| format!("open entries: {e}"))?;
+    f.seek(SeekFrom::Start(*cursor))
+        .map_err(|e| format!("seek entries: {e}"))?;
+    let mut buf = String::new();
+    f.read_to_string(&mut buf)
+        .map_err(|e| format!("read tail: {e}"))?;
+    let cut = match buf.rfind('\n') {
+        Some(i) => i + 1,
+        None => return Ok(None),
+    };
+    let fresh = ledger::load_jsonl(&buf[..cut]).map_err(|e| format!("entries parse: {e}"))?;
+    let start = entries.len();
+    let mut prev = entries.last().map(|e| e.id.clone()).unwrap_or_default();
+    let mut last_grant: Option<String> = None;
+    for (i, e) in fresh.iter().enumerate() {
+        let want = (start + i) as i64;
+        if canon::event_id(&e.body).ok().as_deref() != Some(e.id.as_str()) {
+            return Err(format!("entry {want}: id 与 body 不符（账本可能被外部改写）"));
+        }
+        let ch = e.body.get("chain");
+        let seq = ch.and_then(|c| c.get("seq")).and_then(|s| s.as_int());
+        if seq != Some(want) {
+            return Err(format!(
+                "entry {want}: chain.seq={seq:?}，应为 {want}（账本可能被外部改写，或归档时衔接有误）"
+            ));
+        }
+        let pv = ch
+            .and_then(|c| c.get("prev"))
+            .and_then(|s| s.as_str())
+            .unwrap_or("");
+        if pv != prev {
+            return Err(format!("entry {want}: chain.prev 接不上（账本可能被外部改写）"));
+        }
+        if e.body.get("type").and_then(|x| x.as_str()) == Some(projection::T_GRANT) {
+            last_grant = Some(e.id.clone());
+        }
+        prev = e.id.clone();
+    }
+    entries.extend(fresh);
+    *cursor += cut as u64;
+    Ok(last_grant)
+}
+
+/// 封卷后的归档目录（`.warrant/volumes/`）。
+///
+/// **[SEAL-2026-10-29]** 账本没有上界是已知缺口。封卷的做法**不是截断**，
+/// 而是「把整卷挪走 + 新卷写一条继承 grant」：
+/// 每卷自己完整可验，卷与卷之间用 `parents` 相连 —— **谱系不断，旧账仍可作证**。
+pub const VOLUMES: &str = "volumes";
 
 pub struct Store {
     dir: PathBuf,
@@ -152,6 +356,11 @@ pub struct Store {
     service_key: SigningKey,
     grant_id: String,
     capability: Value,
+    /// 已解析到 `entries.jsonl` 的第几个字节。
+    ///
+    /// `[PERF-2026-10-29]` 增量读指针：写路径只续读「上次之后新增的字节」，
+    /// 不再每次全量重读 ⇒ N 次写从 O(N²) 回到 O(1)。
+    cursor: u64,
     /// 当前是否持锁（`[MULTI-WRITER-2026-10-27]`：只在写路径的一瞬间为 `Some`）
     lock: Option<LedgerLock>,
 }
@@ -175,6 +384,10 @@ impl Store {
             warrant::json::parse(crate::CAPABILITY_JSON).map_err(|e| format!("capability: {e}"))?;
 
         let entries = read_entries(&dir)?;
+        // 读指针 = 刚读到的字节位置；之后只续读新增部分
+        let cursor = std::fs::metadata(dir.join("entries.jsonl"))
+            .map(|m| m.len())
+            .unwrap_or(0);
         let mut st = Self {
             dir,
             entries,
@@ -182,6 +395,7 @@ impl Store {
             service_key,
             grant_id: String::new(),
             capability,
+            cursor,
             lock: Some(lock),
         };
         if st.entries.is_empty() {
@@ -207,19 +421,41 @@ impl Store {
     ///
     /// 为什么必须重读：别的进程可能已经追加了若干条，不重读就会用过期 `seq` 算链位 ⇒ 链断。
     /// 链断不是「有点乱」，而是**整本账作废**（`verify_chain` 从 seq 0 起逐条对，错一位即全废）。
-    fn with_write<T>(
-        &mut self,
-        f: impl FnOnce(&mut Self) -> Result<T, String>,
-    ) -> Result<T, String> {
+    fn with_write<T>(&mut self, f: impl FnOnce(&mut Self) -> Result<T, String>) -> Result<T, String> {
         if self.lock.is_none() {
             self.lock = Some(acquire_lock(&self.dir)?);
-            let dir = self.dir.clone();
-            self.entries = read_entries(&dir)?;
-            self.grant_id = self.current_grant_id()?;
+            // [PERF-2026-10-29] 增量续读：账本没变就是 O(1)（原先每次全量重读 + 验链）
+            if let Some(g) = refresh_entries(&self.dir, &mut self.entries, &mut self.cursor)? {
+                self.grant_id = g;
+            }
+            if self.grant_id.is_empty() {
+                self.grant_id = self.current_grant_id()?;
+            }
         }
         let r = f(self);
         self.lock = None;
         r
+    }
+
+    /// 封卷前的累计条数（从当前卷首条 seal grant 的 `sealed_total` 读；首卷为 0）。
+    ///
+    /// `[SEAL-2026-10-29]` 它让 `offset` **跨卷单调**：封卷后 offset 不回退到 0，
+    /// 否则 `warrant_since(offset)` 会把旧条目重复返回一遍。
+    pub fn base_offset(&self) -> usize {
+        self.entries
+            .first()
+            .and_then(|e| e.body.get("action"))
+            .and_then(|a| a.get("args"))
+            .and_then(|a| a.get("sealed_total"))
+            .and_then(|x| x.as_int())
+            .unwrap_or(0) as usize
+    }
+
+    /// 跨卷单调的逻辑序号 = 已封各卷条数 + 当前卷条数。
+    ///
+    /// 对外的 `offset` 一律用这个；`offset()` 保留为「当前卷内条数」供内部/测试用。
+    pub fn logical_offset(&self) -> usize {
+        self.base_offset() + self.entries.len()
     }
 
     pub fn dir(&self) -> &Path {
@@ -245,6 +481,130 @@ impl Store {
         errs
     }
 
+    /// 封卷：把当前卷整体挪进 `volumes/`，然后在新卷写一条继承 grant。
+    ///
+    /// **[SEAL-2026-10-29]** 为什么不是「截断」：
+    /// 链上的每条 id 都依赖它自己的 `chain.seq`，任何截断都会让保留下来的条目
+    /// 全部 id 失效（等于伪造历史）。所以这里**只挪卷、不改条目**：
+    ///
+    /// ```text
+    /// 旧卷：seq 0..N（原样不动，仍可独立验签）
+    /// 新卷：seq 0 = 继承 grant，parents = [旧卷 head]   ← 谱系在这里接上
+    ///       seq 1.. 后续条目
+    /// ```
+    ///
+    /// 旧卷在新卷的 `action.args` 里被点名（卷名 + 条数 + head），
+    /// 所以第三方拿到新卷就能知道「该去找哪一卷、该核对哪个 head」。
+    pub fn seal(&mut self) -> Result<String, String> {
+        let lock = acquire_lock(&self.dir)?;
+        let r = (|this: &mut Self| {
+            refresh_entries(&this.dir, &mut this.entries, &mut this.cursor)?;
+            if this.entries.len() < 2 {
+                return Err("账本不足 2 条，不需要封卷".to_string());
+            }
+            let head = this.entries.last().map(|e| e.id.clone()).unwrap_or_default();
+            let count = this.entries.len();
+            // 累计总数 = 此前已封各卷 + 本卷 ⇒ 跨卷单调，offset 不回退
+            let total = this.base_offset() + count;
+            let vol_name = format!("vol-{}.jsonl", crate::util::now_ms());
+            let vol_dir = this.dir.join(VOLUMES);
+            std::fs::create_dir_all(&vol_dir).map_err(|e| format!("create volumes: {e}"))?;
+            // 原子改名：先挪走，再立新卷。中途崩了也只是「有卷无新卷」，不会丢条目。
+            std::fs::rename(this.dir.join("entries.jsonl"), vol_dir.join(&vol_name))
+                .map_err(|e| format!("move volume: {e}"))?;
+            // 内存态归零（新卷从 seq 0 开始）
+            this.entries.clear();
+            this.cursor = 0;
+            let id = this.seal_grant(&vol_name, count, total, &head)?;
+            this.grant_id = id.clone();
+            Ok(id)
+        })(self);
+        drop(lock);
+        r
+    }
+
+    /// 新卷的首条：一条 grant —— 带上「我把哪一卷封了、它的 head 是什么」。
+    ///
+    /// 用 grant 而不是别的类型，是为了让后面的 claim 有一个**落在本卷内**的
+    /// `authority.grant_id`（P2 要求它能解析到）。同时 `parents` 指向旧卷 head，
+    /// 把谱系接上。
+    fn seal_grant(
+        &mut self,
+        volume: &str,
+        sealed: usize,
+        total: usize,
+        head: &str,
+    ) -> Result<String, String> {
+        let op = "user:local-operator";
+        // grant 必填 nonce（admission STRUCT 会查）；带上被封面与条数，便于人工肉眼核对
+        let nonce = format!("grant-seal-{}-{}-{}", sealed, crate::util::now_ms(), volume);
+        let body = obj(vec![
+            ("kind", s("claim")),
+            ("type", s(projection::T_GRANT)),
+            ("nonce", s(&nonce)),
+            ("actor", obj(vec![("id", s(op)), ("kind", s("human"))])),
+            (
+                "subject",
+                obj(vec![("id", s("org:local")), ("kind", s("warrant.org"))]),
+            ),
+            (
+                "action",
+                obj(vec![
+                    ("verb", s("grant")),
+                    (
+                        "args",
+                        obj(vec![
+                            ("grantee", s(crate::SIGNER_ID)),
+                            ("target", s("warrantd://workspace")),
+                            (
+                                "types",
+                                arr(vec![
+                                    s(projection::T_OBS),
+                                    s(T_WORLD_CHANGE),
+                                    s(T_AGENT_CLAIM),
+                                    s(T_MCP_CALL),
+                                ]),
+                            ),
+                            // 封卷坐标：第三方据此去找旧卷、核对 head
+                            ("sealed_volume", s(volume)),
+                            // sealed_count = 本卷条数；sealed_total = 含此前各卷的累计总数。
+                            // offset 用它保持**跨卷单调**：封卷后 offset 不会回退到 0。
+                            ("sealed_count", Value::Int(sealed as i64)),
+                            ("sealed_total", Value::Int(total as i64)),
+                            ("sealed_head", s(head)),
+                        ]),
+                    ),
+                ]),
+            ),
+            ("expect", obj(vec![("grantee", s(crate::SIGNER_ID))])),
+            // 谱系：新卷指着旧卷的最后一环
+            ("parents", arr(vec![s(head)])),
+            (
+                "authority",
+                obj(vec![
+                    ("grant_id", s("")),
+                    ("granted_by", s(op)),
+                    ("kind", s("self")),
+                ]),
+            ),
+            (
+                "scope",
+                obj(vec![
+                    ("valid_within", arr(vec![s("org:local")])),
+                    ("valid_across", arr(vec![])),
+                ]),
+            ),
+            (
+                "horizon",
+                obj(vec![
+                    ("issued_at", s(&now_rfc3339())),
+                    ("expires_at", s(&plus_days_rfc3339(3650))),
+                ]),
+            ),
+        ]);
+        self.append_locked(body, None)
+    }
+
     /// 首条 grant：操作员语义，**零签名自举**（与 `warrant_ledger::bootstrap_grant` 同形态）。
     /// 它不是 AI 自我扩权 —— 它的 `authority.kind = self`、`granted_by = user:local-operator`。
     fn bootstrap_grant(&mut self) -> Result<String, String> {
@@ -255,10 +615,7 @@ impl Store {
             ("kind", s("claim")),
             ("type", s(projection::T_GRANT)),
             ("actor", obj(vec![("id", s(op)), ("kind", s("human"))])),
-            (
-                "subject",
-                obj(vec![("id", s("org:local")), ("kind", s("warrant.org"))]),
-            ),
+            ("subject", obj(vec![("id", s("org:local")), ("kind", s("warrant.org"))])),
             (
                 "action",
                 obj(vec![
@@ -321,11 +678,7 @@ impl Store {
         signer: Option<(&SigningKey, &str, &str)>,
     ) -> Result<String, String> {
         let seq = self.entries.len() as i64;
-        let prev = self
-            .entries
-            .last()
-            .map(|e| e.id.clone())
-            .unwrap_or_default();
+        let prev = self.entries.last().map(|e| e.id.clone()).unwrap_or_default();
         let mut pairs = match body {
             Value::Object(p) => p,
             _ => return Err("条目 body 必须是对象".to_string()),
@@ -356,8 +709,9 @@ impl Store {
             .append(true)
             .open(self.dir.join("entries.jsonl"))
             .map_err(|e| format!("open entries: {e}"))?;
-        f.write_all(&bytes)
-            .map_err(|e| format!("append entries: {e}"))?;
+        f.write_all(&bytes).map_err(|e| format!("append entries: {e}"))?;
+        // 自己写的那条也要推进读指针，否则下次续读会把它当「新增」再解析一遍（重复条目）
+        self.cursor += bytes.len() as u64;
         self.entries.push(entry);
         Ok(id)
     }
@@ -373,11 +727,7 @@ impl Store {
     }
 
     /// 内部实现：**假定已持锁**（由 [`Self::with_write`] 保证）。
-    fn append_observation_locked(
-        &mut self,
-        ob: &Observed,
-        subject: &str,
-    ) -> Result<String, String> {
+    fn append_observation_locked(&mut self, ob: &Observed, subject: &str) -> Result<String, String> {
         let nonce = crate::util::nonce_for("warrantd:obs", &[&ob.method, &ob.observed_at, subject]);
         let now = now_rfc3339();
         let body = obj(vec![
@@ -385,15 +735,9 @@ impl Store {
             ("type", s(projection::T_OBS)),
             (
                 "actor",
-                obj(vec![
-                    ("id", s(crate::SIGNER_ID)),
-                    ("kind", s(crate::SIGNER_KIND)),
-                ]),
+                obj(vec![("id", s(crate::SIGNER_ID)), ("kind", s(crate::SIGNER_KIND))]),
             ),
-            (
-                "subject",
-                obj(vec![("id", s(subject)), ("kind", s("warrant.entry"))]),
-            ),
+            ("subject", obj(vec![("id", s(subject)), ("kind", s("warrant.entry"))])),
             (
                 "observation",
                 obj(vec![
@@ -405,10 +749,7 @@ impl Store {
                     ("result", ob.result.clone()),
                     ("evidence", crate::probe::evidence_json(&ob.evidence)),
                     ("observed_at", s(&ob.observed_at)),
-                    (
-                        "self_side_effects",
-                        crate::probe::evidence_json(&ob.self_side_effects),
-                    ),
+                    ("self_side_effects", crate::probe::evidence_json(&ob.self_side_effects)),
                 ]),
             ),
             (
@@ -430,13 +771,32 @@ impl Store {
     ///
     /// 它回答的是：「在我盯着的范围内，世界变了这些」。**不判定谁改的** ——
     /// 归因留给切片②（与账本里已有的 claim 对照）。
+    /// 写一条「世界变更」claim。
+    ///
+    /// `window_from` / `window_to` = **这条记录覆盖的时间窗**（上一次巡边完成 → 这一次巡边完成）。
+    /// [WINDOW-2026-10-28] 为什么要记它：变化发生在这个窗**内的某一刻，但不知道是哪一刻**。
+    /// 把窗记下来，「你看到的东西有多旧」就从"感觉"变成**可查询的事实**：
+    /// 窗宽 = 采样间隔，`now - window_to` = 观测延迟。两者都不再是界面上一行字。
+    ///
+    /// `event_counts`：本窗口内每个路径被文件事件碰了几次（`[JITTER-2026-10-29]`）。
+    /// 快照差分只知道「最后长什么样」；计数把「改了一次」和「改了 17 次」分开 ——
+    /// 后者通常意味着在反复试错，这个信息对读账本的人很值钱。
+    /// 传空 map = 没有 watcher（`once` 等一次性调用），行为与以前完全一致。
     pub fn append_world_change(
         &mut self,
         changes: &[Change],
         scanned: usize,
+        window_from: &str,
+        window_to: &str,
+        event_counts: &std::collections::HashMap<String, usize>,
     ) -> Result<String, String> {
         let changes = changes.to_vec();
-        self.with_write(move |s| s.append_world_change_locked(&changes, scanned))
+        let wf = window_from.to_string();
+        let wt = window_to.to_string();
+        let counts = event_counts.clone();
+        self.with_write(move |s| {
+            s.append_world_change_locked(&changes, scanned, &wf, &wt, &counts)
+        })
     }
 
     /// 内部实现：**假定已持锁**。
@@ -444,14 +804,14 @@ impl Store {
         &mut self,
         changes: &[Change],
         scanned: usize,
+        window_from: &str,
+        window_to: &str,
+        event_counts: &std::collections::HashMap<String, usize>,
     ) -> Result<String, String> {
         let count = changes.len() as i64;
         let nonce = crate::util::nonce_for(
             "warrantd:world",
-            &[
-                &changes.first().map(|c| c.path.clone()).unwrap_or_default(),
-                &now_rfc3339(),
-            ],
+            &[&changes.first().map(|c| c.path.clone()).unwrap_or_default(), &now_rfc3339()],
         );
         let now = now_rfc3339();
         let body = obj(vec![
@@ -466,10 +826,7 @@ impl Store {
             ),
             (
                 "subject",
-                obj(vec![
-                    ("id", s("world:workspace")),
-                    ("kind", s("warrant.world")),
-                ]),
+                obj(vec![("id", s("world:workspace")), ("kind", s("warrant.world"))]),
             ),
             (
                 "action",
@@ -480,6 +837,19 @@ impl Store {
                         obj(vec![
                             ("count", Value::Int(count)),
                             ("scanned", Value::Int(scanned as i64)),
+                            // 这条记录覆盖的时间窗（首扫时 from 为空 = 无基线）
+                            ("window_from", s(window_from)),
+                            ("window_to", s(window_to)),
+                            // 抖动次数：只在有 watcher 时非空
+                            (
+                                "event_counts",
+                                Value::Object(
+                                    event_counts
+                                        .iter()
+                                        .map(|(k, v)| (k.clone(), Value::Int(*v as i64)))
+                                        .collect(),
+                                ),
+                            ),
                             ("changes", crate::snapshot::changes_json(changes)),
                         ]),
                     ),
@@ -565,10 +935,7 @@ impl Store {
                     ("kind", s(crate::SERVICE_SIGNER_KIND)),
                 ]),
             ),
-            (
-                "subject",
-                obj(vec![("id", s(path)), ("kind", s("warrant.path"))]),
-            ),
+            ("subject", obj(vec![("id", s(path)), ("kind", s("warrant.path"))])),
             // P1（`admission.rs:82`）：expect 的每个叶子都必须能在 action.args 里找到。
             // **形状刻意做成 `{路径: 哈希}`** —— 与 `probe::run_fs_hash` 的 result 同形，
             // 这样「agent 说 X=H」与「daemon 看到 X=H」能直接用 `projection::compare` 比对，
@@ -678,10 +1045,7 @@ impl Store {
                     ("kind", s(crate::SERVICE_SIGNER_KIND)),
                 ]),
             ),
-            (
-                "subject",
-                obj(vec![("id", s(&subject)), ("kind", s("warrant.mcp"))]),
-            ),
+            ("subject", obj(vec![("id", s(&subject)), ("kind", s("warrant.mcp"))])),
             (
                 "action",
                 obj(vec![
@@ -701,10 +1065,7 @@ impl Store {
                 ]),
             ),
             // P1：expect 的每个叶子都必须能在 action.args 里找到
-            (
-                "expect",
-                obj(vec![("server", s(server)), ("tool", s(tool))]),
-            ),
+            ("expect", obj(vec![("server", s(server)), ("tool", s(tool))])),
             (
                 "authority",
                 obj(vec![
@@ -738,12 +1099,7 @@ impl Store {
     }
 
     /// 记对应的**响应**（观测）：这次调用成功了没有、回了多大一坨。
-    pub fn append_mcp_result(
-        &mut self,
-        claim_id: &str,
-        ok: bool,
-        bytes: usize,
-    ) -> Result<String, String> {
+    pub fn append_mcp_result(&mut self, claim_id: &str, ok: bool, bytes: usize) -> Result<String, String> {
         let claim_id = claim_id.to_string();
         self.with_write(move |s| s.append_mcp_result_locked(&claim_id, ok, bytes))
     }
@@ -761,15 +1117,9 @@ impl Store {
             ("type", s(projection::T_OBS)),
             (
                 "actor",
-                obj(vec![
-                    ("id", s(crate::SIGNER_ID)),
-                    ("kind", s(crate::SIGNER_KIND)),
-                ]),
+                obj(vec![("id", s(crate::SIGNER_ID)), ("kind", s(crate::SIGNER_KIND))]),
             ),
-            (
-                "subject",
-                obj(vec![("id", s(claim_id)), ("kind", s("warrant.entry"))]),
-            ),
+            ("subject", obj(vec![("id", s(claim_id)), ("kind", s("warrant.entry"))])),
             (
                 "observation",
                 obj(vec![
@@ -787,9 +1137,7 @@ impl Store {
                     ("observed_at", s(&now)),
                     (
                         "evidence",
-                        arr(vec![s(
-                            "warrantd proxy 亲眼看到的那一帧响应（旁路记录，未改写）",
-                        )]),
+                        arr(vec![s("warrantd proxy 亲眼看到的那一帧响应（旁路记录，未改写）")]),
                     ),
                     ("self_side_effects", arr(vec![])),
                 ]),
@@ -826,38 +1174,23 @@ fn load_or_gen_key(dir: &Path, name: &str) -> Result<SigningKey, String> {
     }
 }
 
-fn sign_with(
-    key: &SigningKey,
-    entry_id: &str,
-    at: &str,
-    signer_id: &str,
-    signer_kind: &str,
-) -> Value {
+fn sign_with(key: &SigningKey, entry_id: &str, at: &str, signer_id: &str, signer_kind: &str) -> Value {
     let payload = canon::sig_payload(entry_id, "declare", signer_id, at);
     let bytes = canon::sig_bytes(&payload).expect("sig payload 必须可规范序列化");
     let sig = key.sign(&bytes);
     obj(vec![
         ("alg", s("ed25519")),
-        (
-            "key_id",
-            s(&format!(
-                "ed25519:{}",
-                canon::hex(&key.verifying_key().to_bytes())
-            )),
-        ),
+        ("key_id", s(&format!("ed25519:{}", canon::hex(&key.verifying_key().to_bytes())))),
         ("over", s(entry_id)),
         ("role", s("declare")),
         ("sig", s(&b64url(&sig.to_bytes()))),
         ("signed_at", s(at)),
-        (
-            "signer",
-            obj(vec![("id", s(signer_id)), ("kind", s(signer_kind))]),
-        ),
+        ("signer", obj(vec![("id", s(signer_id)), ("kind", s(signer_kind))])),
     ])
 }
 
 fn decode_hex(text: &str) -> Option<Vec<u8>> {
-    if !text.len().is_multiple_of(2) {
+    if text.len() % 2 != 0 {
         return None;
     }
     (0..text.len())
@@ -919,11 +1252,7 @@ mod tests {
         let oid = st.append_observation(&ob, &gid).unwrap();
         assert!(oid.starts_with("sha256:"));
         assert_eq!(st.offset(), 2);
-        assert!(
-            st.verify().is_empty(),
-            "链与签名必须都过：{:?}",
-            st.verify()
-        );
+        assert!(st.verify().is_empty(), "链与签名必须都过：{:?}", st.verify());
 
         // 重开：能从盘上读回、能验、grant 仍指向同一个
         let st2 = Store::open(&repo).unwrap();
@@ -943,7 +1272,7 @@ mod tests {
             from: Some("sha256:1".into()),
             to: Some("sha256:2".into()),
         }];
-        let id = st.append_world_change(&changes, 10).unwrap();
+        let id = st.append_world_change(&changes, 10, "", "2026-10-28T00:00:00Z", &Default::default()).unwrap();
         assert!(id.starts_with("sha256:"));
         assert!(st.verify().is_empty());
         let _ = std::fs::remove_dir_all(&repo);
@@ -966,9 +1295,7 @@ mod tests {
         let repo = tmp_repo("tamper");
         {
             let mut st = Store::open(&repo).unwrap();
-            let _ = st
-                .append_agent_claim("agent:x", "a.rs", "sha256:1")
-                .unwrap();
+            let _ = st.append_agent_claim("agent:x", "a.rs", "sha256:1").unwrap();
         }
         let p = repo.join(crate::LEDGER_DIR).join("entries.jsonl");
         let text = std::fs::read_to_string(&p).unwrap();
@@ -980,10 +1307,7 @@ mod tests {
             Ok(_) => panic!("篡改必须被发现，但账本被静默接受了"),
             Err(e) => e,
         };
-        assert!(
-            e.contains("不连续") || e.contains("tamper") || e.contains("无效"),
-            "{e}"
-        );
+        assert!(e.contains("不连续") || e.contains("tamper") || e.contains("无效"), "{e}");
         let _ = std::fs::remove_dir_all(&repo);
     }
 
@@ -999,6 +1323,110 @@ mod tests {
     /// 这条测试的意义：它是「多 agent 共享同一本账」成立的最小证明。
     /// 如果 `with_write` 不重读，`b` 会拿 `open` 时的旧 `seq` 去算链位 ⇒ 与 `a` 的条目撞号 ⇒ 链断。
     /// 链断不是「有点乱」，是**整本账作废**。
+    /// **[SEAL-2026-10-29] 封卷后：谱系不断、新卷仍能写、全卷可验。**
+    ///
+    /// 这条钉子守的是「选项 A」的核心承诺 —— **归档之后旧账仍然可作证**。
+    /// 判据有三：新卷首条的 `parents` 指向旧卷 head；封卷后写入照常；
+    /// `verify_all` 能同时验两卷并核对谱系。
+    #[test]
+    fn seal_keeps_lineage_and_ledger_keeps_working() {
+        let repo = tmp_repo("seal");
+        let mut st = Store::open(&repo).unwrap();
+        for i in 0..5 {
+            st.append_agent_claim("agent:x", &format!("f{i}.rs"), "sha256:y")
+                .unwrap();
+        }
+        assert_eq!(st.offset(), 6, "grant + 5 条 claim");
+        let old_head = st.entries().last().unwrap().id.clone();
+
+        let seal_id = st.seal().unwrap();
+        assert_eq!(st.offset(), 1, "新卷只有首条 grant");
+        assert_eq!(st.entries()[0].id, seal_id);
+
+        // 谱系：新卷首条的 parents 必须指向旧卷 head
+        let parents = st.entries()[0]
+            .body
+            .get("parents")
+            .and_then(|p| p.as_array())
+            .map(|a| a.to_vec())
+            .unwrap_or_default();
+        assert!(
+            parents.iter().any(|x| x.as_str() == Some(old_head.as_str())),
+            "新卷首条的 parents 必须指向旧卷 head，否则谱系断了"
+        );
+
+        // 封卷后照常写
+        st.append_agent_claim("agent:x", "after.rs", "sha256:z")
+            .unwrap();
+        assert_eq!(st.offset(), 2);
+
+        // 全卷验证：两卷都在，链与谱系都过
+        let (list, errs) = verify_all(&repo).unwrap();
+        assert_eq!(list.len(), 2, "一卷归档 + 一卷当前，实得 {list:?}");
+        assert!(errs.is_empty(), "全卷验证不该有错：{errs:?}");
+        let _ = std::fs::remove_dir_all(&repo);
+    }
+
+    /// **[PERF-2026-10-29] 增量读的正确性钉：别的 handle 写进来的条目必须被看见。**
+    ///
+    /// 这条是 O(1) 优化的护栏。增量续读的收益来自「不重读历史」，
+    /// 代价是**必须保证不漏读别人写的新条目** —— 漏了就会用过期 `seq` 算链位，链必断。
+    ///
+    /// 场景：A 打开 → B 打开并写一条 → A 再写。A 若只看自己的内存，就会撞 seq。
+    #[test]
+    fn incremental_read_sees_entries_from_another_handle() {
+        let repo = tmp_repo("incr");
+        let mut a = Store::open(&repo).unwrap();
+        a.append_agent_claim("agent:a", "a.rs", "sha256:1").unwrap();
+
+        // 第二个 handle 模拟另一个进程：它写完之后 A 的内存快照就过期了
+        let mut b = Store::open(&repo).unwrap();
+        b.append_agent_claim("agent:b", "b.rs", "sha256:2").unwrap();
+
+        // A 再写：必须续读到 b 那条，否则 seq 会撞
+        a.append_agent_claim("agent:c", "c.rs", "sha256:3").unwrap();
+
+        let v = Store::open(&repo).unwrap();
+        assert_eq!(v.offset(), 4, "grant + 三条 claim");
+        assert!(v.verify().is_empty(), "增量读之后链仍必须完整：{:?}", v.verify());
+        let _ = std::fs::remove_dir_all(&repo);
+    }
+
+    /// **[PERF-2026-10-29] 账本规模 vs 写入/打开耗时 —— 回答「会不会爆炸」必须靠数，不靠感觉。**
+    ///
+    /// `#[ignore]`：默认不跑（会花几秒），手动：`cargo test -p warrantd -- --ignored --nocapture`
+    ///
+    /// 关键怀疑点：`with_write` 每次写入都**重读整个账本**（并发正确性要求）
+    /// ⇒ 写 N 条是 O(N²)，不是 O(N)。这条测试把曲线打出来。
+    #[test]
+    #[ignore]
+    fn measure_scaling_with_ledger_size() {
+        let repo = tmp_repo("perf");
+        // **累积**而不是每轮清空：要测的正是「账本越大越慢」这条曲线
+        for n in [10usize, 20, 40, 80] {
+            let mut st = Store::open(&repo).unwrap();
+            let before = st.offset();
+            let t = std::time::Instant::now();
+            for i in 0..n {
+                st.append_agent_claim("agent:perf", &format!("f{i}.rs"), "sha256:x")
+                    .unwrap();
+            }
+            let write_ms = t.elapsed().as_millis();
+
+            let t2 = std::time::Instant::now();
+            let st2 = Store::open(&repo).unwrap();
+            let open_ms = t2.elapsed().as_millis();
+
+            println!(
+                "账本 {}→{} 条：追加 {n:>3} 条花 {write_ms:>5} ms（{:.2} ms/条）｜open 花 {open_ms:>4} ms",
+                before,
+                st2.offset(),
+                write_ms as f64 / n as f64
+            );
+        }
+        let _ = std::fs::remove_dir_all(&repo);
+    }
+
     #[test]
     fn two_writers_alternating_keep_chain_intact() {
         let repo = tmp_repo("multi");
@@ -1008,7 +1436,7 @@ mod tests {
         a.append_agent_claim("agent:a", "x.rs", "sha256:1").unwrap();
         b.append_agent_claim("agent:b", "y.rs", "sha256:2").unwrap();
         a.append_agent_claim("agent:a", "z.rs", "sha256:3").unwrap();
-        b.append_world_change(&[], 0).unwrap();
+        b.append_world_change(&[], 0, "", "2026-10-28T00:00:01Z", &Default::default()).unwrap();
 
         let st = Store::open(&repo).unwrap();
         assert!(st.verify().is_empty(), "链/签名必须都过：{:?}", st.verify());
@@ -1017,13 +1445,7 @@ mod tests {
         let seqs: Vec<i64> = st
             .entries()
             .iter()
-            .map(|e| {
-                e.body
-                    .get("chain")
-                    .and_then(|c| c.get("seq"))
-                    .and_then(|x| x.as_int())
-                    .unwrap_or(-1)
-            })
+            .map(|e| e.body.get("chain").and_then(|c| c.get("seq")).and_then(|x| x.as_int()).unwrap_or(-1))
             .collect();
         assert_eq!(seqs, vec![0, 1, 2, 3, 4], "链位必须连续：{seqs:?}");
         let _ = std::fs::remove_dir_all(&repo);

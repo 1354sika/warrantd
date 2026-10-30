@@ -167,28 +167,24 @@ impl<'a> JudgeIndex<'a> {
                         obs_by_subject.entry(sid).or_default().push(e);
                     }
                 }
-                Some("claim")
-                    if e.body.get("type").and_then(|x| x.as_str()) != Some(projection::T_GRANT) =>
-                {
-                    if let Some(g) = e
-                        .body
-                        .get("authority")
-                        .and_then(|a| a.get("grant_id"))
-                        .and_then(|x| x.as_str())
-                    {
-                        if !g.is_empty() {
-                            *grant_fanout.entry(g).or_insert(0) += 1;
+                Some("claim") => {
+                    if e.body.get("type").and_then(|x| x.as_str()) != Some(projection::T_GRANT) {
+                        if let Some(g) = e
+                            .body
+                            .get("authority")
+                            .and_then(|a| a.get("grant_id"))
+                            .and_then(|x| x.as_str())
+                        {
+                            if !g.is_empty() {
+                                *grant_fanout.entry(g).or_insert(0) += 1;
+                            }
                         }
                     }
                 }
                 _ => {}
             }
         }
-        Self {
-            by_id,
-            obs_by_subject,
-            grant_fanout,
-        }
+        Self { by_id, obs_by_subject, grant_fanout }
     }
 
     /// [PERF-2026-10-05] 该 subject 名下的**全部观测条目**（走索引，O(该 subject 的观测数)）。
@@ -392,12 +388,10 @@ pub fn tau(entries: &[Entry], claim_id: &str) -> usize {
         ev.dedup();
         by_axis.entry(e.axis).or_default().push(ev);
     }
-    by_axis
-        .values()
-        .map(|sets| antichain_max(sets))
-        .max()
-        .unwrap_or(0)
+    by_axis.values().map(|sets| antichain_max(sets)).max().unwrap_or(0)
 }
+
+
 
 /// 轴强弱（越大越"强"）：**人 > 系统日志 > 软件自报 > AI 自报**。
 /// [RULE-C] 合并时取**更弱**者 —— 更保守（弱轴更不容易满足「含非甲轴」）。
@@ -473,15 +467,8 @@ pub fn snapshot_sha256(claim_id: &str, evs: &[Evidence], d_eff: usize, label: &s
         .map(|e| format!("{}:{}:{}", e.entry_id, e.axis.name(), e.consistent))
         .collect();
     items.sort();
-    let text = format!(
-        "{RULESET_VERSION}|{claim_id}|{}|{d_eff}|{label}",
-        items.join(",")
-    );
-    format!(
-        "{}{}",
-        canon::ID_PREFIX,
-        canon::sha256_hex(&[text.as_bytes()])
-    )
+    let text = format!("{RULESET_VERSION}|{claim_id}|{}|{d_eff}|{label}", items.join(","));
+    format!("{}{}", canon::ID_PREFIX, canon::sha256_hex(&[text.as_bytes()]))
 }
 
 #[cfg(test)]
@@ -515,11 +502,7 @@ mod tests {
 
     /// [RULE-C] 带 `evidence` 的观测（验证协议 §2.2 的证据合并）。
     fn obs_ev(id: &str, claim_id: &str, channel: &str, result_sha: &str, ev: &[&str]) -> Entry {
-        let evs = ev
-            .iter()
-            .map(|x| format!("\"{x}\""))
-            .collect::<Vec<_>>()
-            .join(",");
+        let evs = ev.iter().map(|x| format!("\"{x}\"")).collect::<Vec<_>>().join(",");
         let body = format!(
             r#"{{"kind":"observation","subject":{{"id":"{claim_id}","kind":"warrant.entry"}},"observation":{{"channel":"{channel}","tier":"C1","method":"m","observed_at":"t","evidence":[{evs}],"result":{{"path":"p","content_sha256":"{result_sha}"}}}}}}"#
         );
@@ -537,11 +520,7 @@ mod tests {
         ];
         let v = judge(&es, "c1").unwrap();
         assert_eq!(v.d_eff, 1, "同一份证据（甲与丁）⇒ 合并为一轴: {v:?}");
-        assert_eq!(
-            v.axes,
-            vec![Axis::Ding],
-            "合并后取更弱者（丁 = AI 自报）: {v:?}"
-        );
+        assert_eq!(v.axes, vec![Axis::Ding], "合并后取更弱者（丁 = AI 自报）: {v:?}");
         assert!(!v.has_non_ai, "合并后只剩丁 ⇒ 不满足『含非甲轴』");
         assert_eq!(v.label, "TENTATIVE");
 
@@ -647,10 +626,7 @@ mod tests {
             obs("o2", "c1", "tool_receipt", "aaa"),
         ];
         let v2 = judge(&small, "c1").unwrap();
-        assert!(
-            v2.grant_fanout_ok && v2.label == "FREEZEABLE",
-            "窄授权下仍可认定"
-        );
+        assert!(v2.grant_fanout_ok && v2.label == "FREEZEABLE", "窄授权下仍可认定");
     }
 
     fn human_freeze() -> Value {
@@ -715,10 +691,7 @@ mod tests {
     fn ai_freeze_signature_is_not_bing_axis() {
         let ai_sig =
             json::parse(r#"{"role":"freeze","signer":{"id":"agent:x","kind":"ai"}}"#).unwrap();
-        let es = vec![
-            claim("c1", "aaa", vec![ai_sig]),
-            obs("o1", "c1", "tool_receipt", "aaa"),
-        ];
+        let es = vec![claim("c1", "aaa", vec![ai_sig]), obs("o1", "c1", "tool_receipt", "aaa")];
         let v = judge(&es, "c1").unwrap();
         assert_eq!(v.d_eff, 1, "非人类 freeze 不计丙轴");
     }
@@ -734,25 +707,13 @@ mod tests {
 
     #[test]
     fn snapshot_binds_ruleset_evidence_and_verdict() {
-        let es1 = vec![
-            claim("c1", "aaa", vec![]),
-            obs("o1", "c1", "proc_spawn_readback", "aaa"),
-        ];
-        let es2 = vec![
-            claim("c1", "aaa", vec![]),
-            obs("o2", "c1", "proc_spawn_readback", "aaa"),
-        ];
+        let es1 = vec![claim("c1", "aaa", vec![]), obs("o1", "c1", "proc_spawn_readback", "aaa")];
+        let es2 = vec![claim("c1", "aaa", vec![]), obs("o2", "c1", "proc_spawn_readback", "aaa")];
         let v1 = judge(&es1, "c1").unwrap();
         let v2 = judge(&es1, "c1").unwrap();
         let v3 = judge(&es2, "c1").unwrap();
-        assert_eq!(
-            v1.snapshot_sha256, v2.snapshot_sha256,
-            "同输入同快照（确定性）"
-        );
-        assert_ne!(
-            v1.snapshot_sha256, v3.snapshot_sha256,
-            "证据变 ⇒ 快照变（I3 绑定）"
-        );
+        assert_eq!(v1.snapshot_sha256, v2.snapshot_sha256, "同输入同快照（确定性）");
+        assert_ne!(v1.snapshot_sha256, v3.snapshot_sha256, "证据变 ⇒ 快照变（I3 绑定）");
         assert!(v1.snapshot_sha256.starts_with(canon::ID_PREFIX));
     }
 

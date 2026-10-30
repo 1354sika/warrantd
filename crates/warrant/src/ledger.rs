@@ -20,22 +20,14 @@ pub struct Entry {
 pub fn entry_from_value(v: &Value) -> Option<Entry> {
     let obj = v.as_object()?;
     let get = |k: &str| obj.iter().find(|(kk, _)| kk == k).map(|(_, vv)| vv);
-    let spec = get("spec")
-        .and_then(|x| x.as_str())
-        .unwrap_or(SPEC)
-        .to_string();
+    let spec = get("spec").and_then(|x| x.as_str()).unwrap_or(SPEC).to_string();
     let id = get("id").and_then(|x| x.as_str())?.to_string();
     let body = get("body")?.clone();
     let signatures = get("signatures")
         .and_then(|x| x.as_array())
         .map(|a| a.to_vec())
         .unwrap_or_default();
-    Some(Entry {
-        spec,
-        id,
-        body,
-        signatures,
-    })
+    Some(Entry { spec, id, body, signatures })
 }
 
 pub fn parse_line(line: &str) -> Result<Entry, String> {
@@ -147,7 +139,7 @@ fn b64url_decode(s: &str) -> Option<Vec<u8>> {
 }
 
 fn hex_decode(s: &str) -> Option<Vec<u8>> {
-    if !s.len().is_multiple_of(2) {
+    if s.len() % 2 != 0 {
         return None;
     }
     (0..s.len() / 2)
@@ -160,14 +152,12 @@ fn hex_decode(s: &str) -> Option<Vec<u8>> {
 fn verify_one(alg: &str, pubkey: &[u8], sig: &[u8], msg: &[u8]) -> Result<(), String> {
     match alg {
         "ed25519" => {
-            let pka = <[u8; 32]>::try_from(pubkey)
-                .map_err(|_| "public key must be 32 bytes".to_string())?;
+            let pka = <[u8; 32]>::try_from(pubkey).map_err(|_| "public key must be 32 bytes".to_string())?;
             let vk = ed25519_dalek::VerifyingKey::from_bytes(&pka)
                 .map_err(|_| "invalid public key".to_string())?;
             let sv = ed25519_dalek::Signature::from_slice(sig)
                 .map_err(|_| "signature must be 64 bytes".to_string())?;
-            vk.verify_strict(msg, &sv)
-                .map_err(|_| "verification FAILED".to_string())
+            vk.verify_strict(msg, &sv).map_err(|_| "verification FAILED".to_string())
         }
         "es256" => {
             use p256::ecdsa::signature::Verifier as _;
@@ -175,8 +165,7 @@ fn verify_one(alg: &str, pubkey: &[u8], sig: &[u8], msg: &[u8]) -> Result<(), St
                 .map_err(|_| "invalid public key".to_string())?;
             let sv = p256::ecdsa::Signature::from_slice(sig)
                 .map_err(|_| "signature must be 64 bytes (raw r||s)".to_string())?;
-            vk.verify(msg, &sv)
-                .map_err(|_| "verification FAILED".to_string())
+            vk.verify(msg, &sv).map_err(|_| "verification FAILED".to_string())
         }
         other => Err(format!("unsupported alg {other:?}")),
     }
@@ -209,18 +198,12 @@ pub fn verify_signatures(entries: &[Entry]) -> Vec<String> {
                 continue;
             }
             if !over.is_empty() && over != e.id {
-                errs.push(format!(
-                    "{} sig[{i}]: over={over:?} is not this entry",
-                    e.id
-                ));
+                errs.push(format!("{} sig[{i}]: over={over:?} is not this entry", e.id));
                 continue;
             }
             let prefix = format!("{alg}:");
             let Some(pkhex) = key_id.strip_prefix(&prefix) else {
-                errs.push(format!(
-                    "{} sig[{i}]: bad key_id {key_id:?} for alg {alg:?}",
-                    e.id
-                ));
+                errs.push(format!("{} sig[{i}]: bad key_id {key_id:?} for alg {alg:?}", e.id));
                 continue;
             };
             let Some(pkb) = hex_decode(pkhex) else {
@@ -233,14 +216,12 @@ pub fn verify_signatures(entries: &[Entry]) -> Vec<String> {
             };
             // reason / based_on 必须并入 payload 再验（SPEC §2.6：挂在签名上却不进 payload = 未认证）
             let reason = sig.get("reason").and_then(|x| x.as_str());
-            let based_on: Option<Vec<String>> =
-                sig.get("based_on").and_then(|x| x.as_array()).map(|a| {
-                    a.iter()
-                        .filter_map(|v| v.as_str().map(str::to_string))
-                        .collect()
-                });
-            let payload =
-                canon::sig_payload_with(&e.id, role, sid, at, reason, based_on.as_deref());
+            let based_on: Option<Vec<String>> = sig.get("based_on").and_then(|x| x.as_array()).map(|a| {
+                a.iter()
+                    .filter_map(|v| v.as_str().map(str::to_string))
+                    .collect()
+            });
+            let payload = canon::sig_payload_with(&e.id, role, sid, at, reason, based_on.as_deref());
             let Ok(bytes) = canon::sig_bytes(&payload) else {
                 errs.push(format!("{} sig[{i}]: payload not canonicalizable", e.id));
                 continue;
@@ -255,19 +236,13 @@ pub fn verify_signatures(entries: &[Entry]) -> Vec<String> {
 
 /// 信任锚：每个签名的 `key_id` 必须落在 `trusted`（已登记公钥集）内。
 /// 没有这一步，伪造者只要自造一对密钥、把公钥写进 `key_id`，[`verify_signatures`] 也会通过。
-pub fn check_key_trust(
-    entries: &[Entry],
-    trusted: &std::collections::HashSet<String>,
-) -> Vec<String> {
+pub fn check_key_trust(entries: &[Entry], trusted: &std::collections::HashSet<String>) -> Vec<String> {
     let mut errs = Vec::new();
     for e in dedup(entries) {
         for (i, sig) in e.signatures.iter().enumerate() {
             let key_id = sig.get("key_id").and_then(|x| x.as_str()).unwrap_or("");
             if !trusted.contains(key_id) {
-                errs.push(format!(
-                    "{} sig[{i}]: signer key {key_id:?} is not registered",
-                    e.id
-                ));
+                errs.push(format!("{} sig[{i}]: signer key {key_id:?} is not registered", e.id));
             }
         }
     }

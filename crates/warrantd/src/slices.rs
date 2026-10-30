@@ -126,31 +126,37 @@ fn parse_changes(v: Option<&Value>) -> Vec<Change> {
         out.push(Change {
             path: path.to_string(),
             kind,
-            from: it
-                .get("from")
-                .and_then(|x| x.as_str())
-                .map(|s| s.to_string()),
+            from: it.get("from").and_then(|x| x.as_str()).map(|s| s.to_string()),
             to: it.get("to").and_then(|x| x.as_str()).map(|s| s.to_string()),
         });
     }
     out
 }
 
-/// 账本里所有的「世界变更」条目：`(claim_id, changes)`。
-pub fn world_changes(entries: &[Entry]) -> Vec<(String, Vec<Change>)> {
+/// 账本里所有的「世界变更」条目：`(claim_id, window_from, window_to, changes)`。
+///
+/// [WINDOW-2026-10-28] 带出时间窗：变化发生在 `[from, to]` 内的**某一刻，但不知道是哪一刻**。
+/// 窗宽 = 采样间隔；`now - to` = 观测延迟。两者都因此变成可查的数。
+pub fn world_changes(entries: &[Entry]) -> Vec<(String, String, String, Vec<Change>)> {
     entries
         .iter()
         .filter(|e| e.body.get("type").and_then(|x| x.as_str()) == Some(T_WORLD_CHANGE))
         .map(|e| {
-            let ch = parse_changes(
-                e.body
-                    .get("action")
-                    .and_then(|a| a.get("args"))
-                    .and_then(|a| a.get("changes")),
-            );
-            (e.id.clone(), ch)
+            let args = e.body.get("action").and_then(|a| a.get("args"));
+            let from = args
+                .and_then(|a| a.get("window_from"))
+                .and_then(|x| x.as_str())
+                .unwrap_or("")
+                .to_string();
+            let to = args
+                .and_then(|a| a.get("window_to"))
+                .and_then(|x| x.as_str())
+                .unwrap_or("")
+                .to_string();
+            let ch = parse_changes(args.and_then(|a| a.get("changes")));
+            (e.id.clone(), from, to, ch)
         })
-        .filter(|(_, ch)| !ch.is_empty())
+        .filter(|(_, _, _, ch)| !ch.is_empty())
         .collect()
 }
 
@@ -158,6 +164,9 @@ pub fn world_changes(entries: &[Entry]) -> Vec<(String, Vec<Change>)> {
 #[derive(Debug, Clone)]
 pub struct Unreported {
     pub world_claim: String,
+    /// 这条变更覆盖的时间窗（首扫的 from 为空）
+    pub window_from: String,
+    pub window_to: String,
     pub changes: Vec<Change>,
 }
 
@@ -165,8 +174,10 @@ pub fn unreported(entries: &[Entry]) -> Vec<Unreported> {
     let declared = declared_paths(entries);
     world_changes(entries)
         .into_iter()
-        .map(|(id, changes)| Unreported {
+        .map(|(id, from, to, changes)| Unreported {
             world_claim: id,
+            window_from: from,
+            window_to: to,
             changes: changes
                 .into_iter()
                 .filter(|c| !declared.contains(&c.path) && !is_meta(&c.path))
@@ -192,7 +203,7 @@ pub struct SinceReport {
     pub to: usize,
     pub items: Vec<SinceItem>,
     /// 水位之后的世界变更（可直接给 agent 当「你不在时变了这些」）
-    pub world: Vec<(String, Vec<Change>)>,
+    pub world: Vec<(String, String, String, Vec<Change>)>,
     /// 其中**没有任何 agent 申报过**的部分（真正的滞后，不是被跟进的变更）
     pub unreported: Vec<Change>,
 }
@@ -204,25 +215,10 @@ pub fn since(entries: &[Entry], from: usize) -> SinceReport {
     let items: Vec<SinceItem> = tail
         .iter()
         .map(|e| SinceItem {
-            seq: e
-                .body
-                .get("chain")
-                .and_then(|c| c.get("seq"))
-                .and_then(|x| x.as_int())
-                .unwrap_or(-1),
+            seq: e.body.get("chain").and_then(|c| c.get("seq")).and_then(|x| x.as_int()).unwrap_or(-1),
             id: e.id.clone(),
-            kind: e
-                .body
-                .get("kind")
-                .and_then(|x| x.as_str())
-                .unwrap_or("")
-                .to_string(),
-            type_: e
-                .body
-                .get("type")
-                .and_then(|x| x.as_str())
-                .unwrap_or("")
-                .to_string(),
+            kind: e.body.get("kind").and_then(|x| x.as_str()).unwrap_or("").to_string(),
+            type_: e.body.get("type").and_then(|x| x.as_str()).unwrap_or("").to_string(),
             actor: e
                 .body
                 .get("actor")
@@ -232,27 +228,31 @@ pub fn since(entries: &[Entry], from: usize) -> SinceReport {
                 .to_string(),
         })
         .collect();
-    let world: Vec<(String, Vec<Change>)> = tail
+    let world: Vec<(String, String, String, Vec<Change>)> = tail
         .iter()
         .filter(|e| e.body.get("type").and_then(|x| x.as_str()) == Some(T_WORLD_CHANGE))
         .map(|e| {
+            let args = e.body.get("action").and_then(|a| a.get("args"));
             (
                 e.id.clone(),
-                parse_changes(
-                    e.body
-                        .get("action")
-                        .and_then(|a| a.get("args"))
-                        .and_then(|a| a.get("changes")),
-                ),
+                args.and_then(|a| a.get("window_from"))
+                    .and_then(|x| x.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                args.and_then(|a| a.get("window_to"))
+                    .and_then(|x| x.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                parse_changes(args.and_then(|a| a.get("changes"))),
             )
         })
-        .filter(|(_, c)| !c.is_empty())
+        .filter(|(_, _, _, c)| !c.is_empty())
         .collect();
     // 未申报判定要用**全账本**的申报集（水位之前申报过的，不该在水位之后被误报成「未申报」）
     let declared = declared_paths(entries);
     let unreported = world
         .iter()
-        .flat_map(|(_, cs)| cs.iter().cloned())
+        .flat_map(|(_, _, _, cs)| cs.iter().cloned())
         .filter(|c| !declared.contains(&c.path) && !is_meta(&c.path))
         .collect();
     SinceReport {

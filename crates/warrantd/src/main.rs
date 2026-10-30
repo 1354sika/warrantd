@@ -47,6 +47,7 @@ fn main() {
         "unreported" => cmd_unreported(rest),
         "since" => cmd_since(rest),
         "verify" => cmd_verify(rest),
+        "seal" => cmd_seal(rest),
         "proxy" => cmd_proxy(rest),
         "mcp" => cmd_mcp(rest),
         "open" => cmd_open(rest),
@@ -143,10 +144,7 @@ fn watch_list(repo: &Path, rest: &[String]) -> (Vec<String>, &'static str) {
             v.sort();
             (v, "git ls-files（仅已跟踪文件）")
         }
-        _ => (
-            Vec::new(),
-            "空（既无 --watch 也无 watch.list，且不是 git 仓库）",
-        ),
+        _ => (Vec::new(), "空（既无 --watch 也无 watch.list，且不是 git 仓库）"),
     }
 }
 
@@ -169,11 +167,9 @@ fn cmd_status(rest: &[String]) -> Result<(), String> {
         ("channel", s(warrantd::CHANNEL)),
         ("declared_tier", s(warrantd::DECLARED_TIER)),
         ("signer", s(warrantd::SIGNER_ID)),
-        (
-            "ledger",
-            s(&st.dir().join("entries.jsonl").display().to_string()),
-        ),
-        ("offset", Value::Int(st.offset() as i64)),
+        ("ledger", s(&st.dir().join("entries.jsonl").display().to_string())),
+        // offset 用**跨卷单调**的逻辑序号：封卷后不回退，since 才不会重复
+        ("offset", Value::Int(st.logical_offset() as i64)),
         ("grant", s(st.grant_id())),
         ("chain_ok", Value::Bool(st.verify().is_empty())),
         // 「现在有别人在写吗」——多主体场景的第一条诊断线索
@@ -185,30 +181,14 @@ fn cmd_status(rest: &[String]) -> Result<(), String> {
         // 分开报，是因为它们的能力差一个档：目录指纹只证明「变了」，不证明「变成什么」。
         (
             "watching_files",
-            Value::Int(
-                watch
-                    .iter()
-                    .filter(|r| !repo.join(r.as_str()).is_dir())
-                    .count() as i64,
-            ),
+            Value::Int(watch.iter().filter(|r| !repo.join(r.as_str()).is_dir()).count() as i64),
         ),
         (
             "watching_dirs_struct_level",
-            Value::Int(
-                watch
-                    .iter()
-                    .filter(|r| repo.join(r.as_str()).is_dir())
-                    .count() as i64,
-            ),
+            Value::Int(watch.iter().filter(|r| repo.join(r.as_str()).is_dir()).count() as i64),
         ),
-        (
-            "ignore_rules",
-            Value::Int(probe::ignore_rules(&repo).len() as i64),
-        ),
-        (
-            "snapshot_at",
-            s(&snap.as_ref().map(|x| x.at.clone()).unwrap_or_default()),
-        ),
+        ("ignore_rules", Value::Int(probe::ignore_rules(&repo).len() as i64)),
+        ("snapshot_at", s(&snap.as_ref().map(|x| x.at.clone()).unwrap_or_default())),
         // ---- 盲区（**看不见什么 —— 这一栏比上一栏重要**）----
         (
             "blind_spots",
@@ -257,16 +237,42 @@ fn cmd_daemon(rest: &[String]) -> Result<(), String> {
             ("watching", Value::Int(watch.len() as i64)),
             ("watch_source", s(src)),
             ("interval_secs", Value::Int(interval as i64)),
-            (
-                "note",
-                s("常驻是为了「观测在场」：宿主不调用也照看，滞后窗口 = interval")
-            ),
+            ("note", s("常驻是为了「观测在场」：宿主不调用也照看，滞后窗口 = interval")),
         ]))
     );
+    // [WATCH-2026-10-29] 有 watcher 就等事件（延迟从 interval 降到毫秒级）；
+    // 起不来就退回纯定时 —— 宁可慢，不可假：少盯一个不会变盲区，只是延迟回到采样级。
+    let mut w = warrantd::watch::Watcher::start(&repo, &watch).ok();
     let mut i = 0u64;
+    let mut first = true;
     loop {
-        match warrantd::sweep::sweep(&repo, &watch) {
-            Ok(o) => println!("{}", o.to_line()),
+        // 首轮立刻扫；之后**先等事件**（把这一波累计起来）再扫 —— [JITTER-2026-10-29]
+        if !first {
+            match &mut w {
+                Some(w) => {
+                    w.wait(Duration::from_secs(interval));
+                }
+                None => std::thread::sleep(Duration::from_secs(interval)),
+            }
+        }
+        first = false;
+        // **[JITTER-2026-10-29] 事件先到、写入后到。**
+        // 真机实测：收到事件后立刻扫，会扫到「还没写完」的旧内容 ⇒ changes=0，
+        // 而计数已被这一轮 take 走 ⇒ 计数白丢。给 100ms 让写落盘。
+        if w.is_some() {
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        let counts = w.as_ref().map(|x| x.counts_snapshot()).unwrap_or_default();
+        match warrantd::sweep::sweep_with_events(&repo, &watch, &counts) {
+            Ok(o) => {
+                // 只有**真的写了一条世界变更**才清空计数 —— 否则留着等下一轮（避免白丢）
+                if o.changes > 0 {
+                    if let Some(w) = w.as_mut() {
+                        w.clear_counts();
+                    }
+                }
+                println!("{}", o.to_line());
+            }
             Err(e) => eprintln!("warrantd: 本轮巡边失败（不影响下一轮）：{e}"),
         }
         i += 1;
@@ -275,7 +281,6 @@ fn cmd_daemon(rest: &[String]) -> Result<(), String> {
                 break;
             }
         }
-        std::thread::sleep(Duration::from_secs(interval));
     }
     Ok(())
 }
@@ -303,7 +308,7 @@ fn cmd_claim(rest: &[String]) -> Result<(), String> {
             ("actor", s(&actor)),
             ("path", s(&path)),
             ("expect", s(&expect)),
-            ("offset", Value::Int(st.offset() as i64)),
+            ("offset", Value::Int(st.logical_offset() as i64)),
         ]))
     );
     Ok(())
@@ -317,7 +322,8 @@ fn cmd_check(rest: &[String]) -> Result<(), String> {
         .find(|a| !a.starts_with("--") && **a != repo.display().to_string())
         .ok_or("缺 <claim-id>")?;
     let st = store::Store::open(&repo)?;
-    let v = slices::check_claim(st.entries(), id).ok_or_else(|| format!("账本里没有这条：{id}"))?;
+    let v = slices::check_claim(st.entries(), id)
+        .ok_or_else(|| format!("账本里没有这条：{id}"))?;
     println!(
         "{}",
         to_line(&obj(vec![
@@ -332,6 +338,11 @@ fn cmd_check(rest: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// 只读当前卷（`unreported --current` 用）。
+fn st_entries_only(repo: &Path) -> Result<Vec<warrant::ledger::Entry>, String> {
+    Ok(store::Store::open(repo)?.entries().to_vec())
+}
+
 fn cmd_unreported(rest: &[String]) -> Result<(), String> {
     let res = repo_of(rest)?;
     let repo = res.root;
@@ -339,7 +350,18 @@ fn cmd_unreported(rest: &[String]) -> Result<(), String> {
     // 预期副作用（`target/` 每次编译都会变）：按 `.warrant/ignore` 过滤，
     // 但**必须报出被排除了多少条** —— 否则「过滤」就成了新的黑盒。
     let rules = probe::ignore_rules(&repo);
-    let items = slices::unreported(st.entries());
+    // [SEAL-2026-10-29] **默认跨卷**。
+    //
+    // 为什么不是「只看当前卷」：未申报的变更不因为被封卷就变成已申报 ——
+    // 只看当前卷会让历史未申报**静默消失**，那等于「封卷洗白历史」。
+    // 代价：卷很多时要多读几遍文件；`--current` 可退回只看当前卷。
+    let everything = if rest.iter().any(|a| a == "--current") {
+        let _ = st;
+        st_entries_only(&repo)?
+    } else {
+        store::all_entries(&repo)?
+    };
+    let items = slices::unreported(&everything);
     let mut rows = Vec::new();
     let mut excluded = 0i64;
     for u in &items {
@@ -350,6 +372,8 @@ fn cmd_unreported(rest: &[String]) -> Result<(), String> {
             }
             rows.push(obj(vec![
                 ("world_claim", s(&u.world_claim)),
+                ("window_from", s(&u.window_from)),
+                ("window_to", s(&u.window_to)),
                 ("path", s(&c.path)),
                 ("kind", s(c.kind.as_str())),
             ]));
@@ -361,10 +385,7 @@ fn cmd_unreported(rest: &[String]) -> Result<(), String> {
             ("unreported", Value::Int(rows.len() as i64)),
             ("excluded_by_ignore", Value::Int(excluded)),
             ("ignore_rules", Value::Int(rules.len() as i64)),
-            (
-                "note",
-                s("变了但没有任何 agent 申报过 —— 这是负事实，不是错误")
-            ),
+            ("note", s("变了但没有任何 agent 申报过 —— 这是负事实，不是错误")),
             ("items", Value::Array(rows)),
         ]))
     );
@@ -380,8 +401,14 @@ fn cmd_since(rest: &[String]) -> Result<(), String> {
         .ok_or("缺 <offset>（上次读到的条数；不知道就给 0）")?
         .parse()
         .map_err(|e| format!("offset: {e}"))?;
-    let st = store::Store::open(&repo)?;
-    let rep = slices::since(st.entries(), off);
+    // [SEAL-2026-10-29] `off` 是**跨卷逻辑序号**，所以必须用 all_entries 合并后再切 ——
+    // 只看当前卷会切错（封卷后当前卷很短，off 却很大 ⇒ 直接越界返回空）。
+    let all = store::all_entries(&repo)?;
+    let total = all.len();
+    let from = off.min(total);
+    // 仅用于确认账本可打开/报告当前卷位置；切片本身走合并后的列表
+    let _st = store::Store::open(&repo)?;
+    let rep = slices::since(&all, from);
     let items: Vec<Value> = rep
         .items
         .iter()
@@ -417,22 +444,46 @@ fn cmd_since(rest: &[String]) -> Result<(), String> {
 fn cmd_verify(rest: &[String]) -> Result<(), String> {
     let res = repo_of(rest)?;
     let repo = res.root;
+    // `--all`：连同 volumes/ 各卷一起验，并核对卷间谱系（封过卷就必须用它）
+    if rest.iter().any(|a| a == "--all") {
+        let (list, errs) = store::verify_all(&repo)?;
+        println!(
+            "{}",
+            to_line(&obj(vec![
+                (
+                    "volumes",
+                    arr(list
+                        .iter()
+                        .map(|(n, c)| obj(vec![
+                            ("name", s(n)),
+                            ("entries", Value::Int(*c as i64)),
+                        ]))
+                        .collect())
+                ),
+                ("ok", Value::Bool(errs.is_empty())),
+                ("errors", arr(errs.iter().map(|e| s(e)).collect())),
+                (
+                    "note",
+                    s("封卷后谱系靠 parents 连接：每卷独立可验，第三方可各自复算，也可顺着 parents 一路回溯")
+                ),
+            ]))
+        );
+        return if errs.is_empty() {
+            Ok(())
+        } else {
+            Err("账本自检未通过（--all）".into())
+        };
+    }
     let st = store::Store::open(&repo)?;
     let errs = st.verify();
     println!(
         "{}",
         to_line(&obj(vec![
-            (
-                "ledger",
-                s(&st.dir().join("entries.jsonl").display().to_string())
-            ),
+            ("ledger", s(&st.dir().join("entries.jsonl").display().to_string())),
             ("entries", Value::Int(st.offset() as i64)),
             ("ok", Value::Bool(errs.is_empty())),
             ("errors", arr(errs.iter().map(|e| s(e)).collect())),
-            (
-                "note",
-                s("第三方拿到 entries.jsonl 可用同一判据自行复算，不必信 warrantd 的话")
-            ),
+            ("note", s("第三方拿到 entries.jsonl 可用同一判据自行复算，不必信 warrantd 的话")),
         ]))
     );
     if errs.is_empty() {
@@ -440,6 +491,38 @@ fn cmd_verify(rest: &[String]) -> Result<(), String> {
     } else {
         Err("账本自检未通过".into())
     }
+}
+
+/// `warrantd seal` —— 封卷。
+///
+/// **[SEAL-2026-10-29]** 账本没有上界是已知缺口。封卷**不是截断**：
+/// 旧卷原样保留（仍可独立验签），新卷首条 grant 的 `parents` 指向旧卷 head，谱系不断。
+fn cmd_seal(rest: &[String]) -> Result<(), String> {
+    let res = repo_of(rest)?;
+    let repo = res.root;
+    let mut st = store::Store::open(&repo)?;
+    let before = st.offset();
+    if before < 2 {
+        return Err(format!("账本只有 {before} 条，不需要封卷"));
+    }
+    let id = st.seal()?;
+    println!(
+        "{}",
+        to_line(&obj(vec![
+            ("sealed_entries", Value::Int(before as i64)),
+            ("seal_grant", s(&id)),
+            ("new_offset", Value::Int(st.logical_offset() as i64)),
+            (
+                "volumes_dir",
+                s(&repo.join(LEDGER_DIR).join(store::VOLUMES).display().to_string())
+            ),
+            (
+                "note",
+                s("旧卷原样保留、仍可独立验签；新卷首条 grant 的 parents 指向旧卷 head —— 谱系不断。用 warrantd verify --all 一次验完")
+            ),
+        ]))
+    );
+    Ok(())
 }
 
 /// `warrantd proxy` —— 站在 host 与真 MCP server 之间旁观并记账（洞②）。
@@ -456,8 +539,7 @@ fn cmd_proxy(rest: &[String]) -> Result<(), String> {
     let cmd: Vec<String> = rest[i + 1..].to_vec();
     if cmd.is_empty() {
         return Err(
-            "`--` 之后要给 MCP server 的启动命令（例如 `-- python kit/lceda/mcp_server.py`）"
-                .into(),
+            "`--` 之后要给 MCP server 的启动命令（例如 `-- python kit/lceda/mcp_server.py`）".into(),
         );
     }
     eprintln!(
@@ -509,36 +591,14 @@ mod tests {
                 "fs": {"command": "npx", "args": ["-y", "srv"]}
             }
         });
-        assert_eq!(
-            wrap_value(&mut v, "C:/x/warrantd.exe", "C:/proj"),
-            2,
-            "两个都该包"
-        );
+        assert_eq!(wrap_value(&mut v, "C:/x/warrantd.exe", "C:/proj"), 2, "两个都该包");
         let lceda = &v["mcpServers"]["lceda"];
         assert_eq!(lceda["args"][0], "proxy");
-        assert!(
-            lceda["args"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|a| a == "python"),
-            "原命令必须保留"
-        );
-        assert!(
-            lceda["args"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|a| a == "kit/lceda/mcp_server.py"),
-            "原参数必须保留"
-        );
+        assert!(lceda["args"].as_array().unwrap().iter().any(|a| a == "python"), "原命令必须保留");
+        assert!(lceda["args"].as_array().unwrap().iter().any(|a| a == "kit/lceda/mcp_server.py"), "原参数必须保留");
 
         // 再跑一次 ⇒ 一个都不该改（幂等）
-        assert_eq!(
-            wrap_value(&mut v, "C:/x/warrantd.exe", "C:/proj"),
-            0,
-            "第二次必须 0 改动"
-        );
+        assert_eq!(wrap_value(&mut v, "C:/x/warrantd.exe", "C:/proj"), 0, "第二次必须 0 改动");
     }
 
     /// command 被改成别名/纯名也算包过（双保险那条：args 首项 proxy）
@@ -558,10 +618,7 @@ mod tests {
 
     #[test]
     fn no_double_dash_scans_everything() {
-        let rest: Vec<String> = ["--repo", "/tmp/proj"]
-            .iter()
-            .map(|x| x.to_string())
-            .collect();
+        let rest: Vec<String> = ["--repo", "/tmp/proj"].iter().map(|x| x.to_string()).collect();
         assert_eq!(flag(&rest, "--repo"), Some("/tmp/proj".to_string()));
     }
 }
@@ -572,12 +629,15 @@ fn autodetect_mcp_config() -> Option<std::path::PathBuf> {
         .or_else(|_| std::env::var("HOME"))
         .ok()?;
     let home = std::path::PathBuf::from(home);
-    [
+    for p in [
         home.join(".claude.json"),
         home.join(".cursor").join("mcp.json"),
-    ]
-    .into_iter()
-    .find(|p| p.is_file())
+    ] {
+        if p.is_file() {
+            return Some(p);
+        }
+    }
+    None
 }
 
 /// `warrantd wrap` —— **只打印**「你的 MCP 配置该改成什么样」，不碰任何文件。
@@ -641,10 +701,7 @@ fn already_wrapped(obj: &serde_json::Map<String, serde_json::Value>) -> bool {
     }
     // 双保险：args 第一个是 proxy 也算（哪怕 command 被用户改成了别名）
     matches!(
-        obj.get("args")
-            .and_then(|a| a.as_array())
-            .and_then(|a| a.first())
-            .and_then(|x| x.as_str()),
+        obj.get("args").and_then(|a| a.as_array()).and_then(|a| a.first()).and_then(|x| x.as_str()),
         Some("proxy")
     )
 }
@@ -656,9 +713,7 @@ fn wrap_value(v: &mut serde_json::Value, exe: &str, repo: &str) -> usize {
         return 0;
     };
     for (name, cfg) in servers.iter_mut() {
-        let Some(obj) = cfg.as_object_mut() else {
-            continue;
-        };
+        let Some(obj) = cfg.as_object_mut() else { continue };
         if already_wrapped(obj) {
             continue;
         }
@@ -709,17 +764,8 @@ fn cmd_admit(rest: &[String]) -> Result<(), String> {
 /// 抽出位置参数（跳过 `--flag` 与它的值）—— `probe` 需要"第一个位置参数是原语名"。
 fn positional(rest: &[String]) -> Vec<String> {
     const WITH_VALUE: &[&str] = &[
-        "--repo",
-        "--name",
-        "--port",
-        "--interval",
-        "--limit",
-        "--watch",
-        "--out",
-        "--expect",
-        "--actor",
-        "--path",
-        "--max-iters",
+        "--repo", "--name", "--port", "--interval", "--limit", "--watch", "--out",
+        "--expect", "--actor", "--path", "--max-iters",
     ];
     let mut out = Vec::new();
     let mut skip = false;
@@ -811,7 +857,7 @@ fn cmd_ui(rest: &[String]) -> Result<(), String> {
     let port: u16 = flag(rest, "--port")
         .and_then(|x| x.parse().ok())
         .unwrap_or(0); // 0 = 让系统分配空闲端口
-                       // --no-open：测试与远程场景用（不弹浏览器）
+    // --no-open：测试与远程场景用（不弹浏览器）
     let open_it = !rest.iter().any(|a| a == "--no-open");
     ui::serve(&res.root, port, open_it)
 }
@@ -841,10 +887,7 @@ fn cmd_open(rest: &[String]) -> Result<(), String> {
     println!("══ 信使已打开 ══");
     println!("项目　：{}", repo.display());
     println!("观测面：{} 项（{}）", watch.len(), src);
-    println!(
-        "账本　：{}",
-        repo.join(LEDGER_DIR).join("entries.jsonl").display()
-    );
+    println!("账本　：{}", repo.join(LEDGER_DIR).join("entries.jsonl").display());
     println!();
     println!("关掉这个窗口 = 停止观测。");
     println!("也就是说：关着的时候世界照样在变，那段时间我看不见。");
@@ -852,29 +895,48 @@ fn cmd_open(rest: &[String]) -> Result<(), String> {
     println!("（按 Ctrl+C 退出）");
     println!();
 
+    // [WATCH-2026-10-29] 同上：有事件就立刻扫，没有就等满 interval 再兜底扫一次
+    let mut w = warrantd::watch::Watcher::start(&repo, &watch).ok();
     let mut first = true;
     loop {
-        match warrantd::sweep::sweep(&repo, &watch) {
+        // 首轮立刻扫；之后**先等事件**（把这一波累计起来）再扫 —— [JITTER-2026-10-29]
+        if !first {
+            match &mut w {
+                Some(w) => {
+                    w.wait(Duration::from_secs(interval));
+                }
+                None => std::thread::sleep(Duration::from_secs(interval)),
+            }
+        }
+        let is_first = first;
+        first = false;
+        // **[JITTER-2026-10-29] 事件先到、写入后到。**
+        // 真机实测：收到事件后立刻扫，会扫到「还没写完」的旧内容 ⇒ changes=0，
+        // 而计数已被这一轮 take 走 ⇒ 计数白丢。给 100ms 让写落盘。
+        if w.is_some() {
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        let counts = w.as_ref().map(|x| x.counts_snapshot()).unwrap_or_default();
+        match warrantd::sweep::sweep_with_events(&repo, &watch, &counts) {
             Ok(o) => {
                 let hms: String = warrantd::util::now_rfc3339()
                     .chars()
                     .skip(11)
                     .take(8)
                     .collect();
-                if first {
-                    println!(
-                        "[{hms}] 基线已建：{} 项（{src}）；此后有变化才提示",
-                        o.scanned
-                    );
+                if is_first {
+                    println!("[{hms}] 基线已建：{} 项（{src}）；此后有变化才提示", o.scanned);
                     first = false;
                 } else if o.changes > 0 {
+                    if let Some(w) = w.as_mut() {
+                        w.clear_counts();
+                    }
                     println!("[{hms}] {} 处变化，账本 {} 条", o.changes, o.offset);
                 }
                 // 没变化就不打印：安静是对的，刷屏会让人把它关掉
             }
             Err(e) => eprintln!("巡边失败（下一轮继续）：{e}"),
         }
-        std::thread::sleep(Duration::from_secs(interval));
     }
 }
 

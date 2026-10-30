@@ -117,10 +117,7 @@ pub fn prove(leaves: &[String], index: usize) -> Result<Vec<ProofStep>, String> 
         return Err("empty leaf set: no root exists".to_string());
     }
     if index >= leaves.len() {
-        return Err(format!(
-            "index {index} out of range (count {})",
-            leaves.len()
-        ));
+        return Err(format!("index {index} out of range (count {})", leaves.len()));
     }
     let hs: Vec<[u8; 32]> = leaves.iter().map(|s| leaf_hash(s)).collect();
     let mut out = Vec::new();
@@ -189,17 +186,11 @@ pub fn verify(
             ));
         }
         let sib = decode32(&step.hash)?;
-        cur = if left {
-            node_hash(&cur, &sib)
-        } else {
-            node_hash(&sib, &cur)
-        };
+        cur = if left { node_hash(&cur, &sib) } else { node_hash(&sib, &cur) };
     }
     let got = canon::hex(&cur);
     if got != root_hex.to_ascii_lowercase() {
-        return Err(format!(
-            "root mismatch: computed {got}, expected {root_hex}"
-        ));
+        return Err(format!("root mismatch: computed {got}, expected {root_hex}"));
     }
     Ok(())
 }
@@ -246,7 +237,8 @@ mod tests {
             let root = root_hex(&ls);
             for i in 0..n {
                 let proof = prove(&ls, i).unwrap_or_else(|e| panic!("n={n} i={i}: {e}"));
-                verify(&ls[i], &proof, &root, i, n).unwrap_or_else(|e| panic!("n={n} i={i}: {e}"));
+                verify(&ls[i], &proof, &root, i, n)
+                    .unwrap_or_else(|e| panic!("n={n} i={i}: {e}"));
             }
         }
     }
@@ -265,10 +257,7 @@ mod tests {
         let root = root_hex(&ls);
         let mut proof = prove(&ls, 3).unwrap();
         proof[0].hash = canon::hex(&[9u8; 32]);
-        assert!(
-            verify(&ls[3], &proof, &root, 3, 7).is_err(),
-            "改兄弟哈希必须被拒"
-        );
+        assert!(verify(&ls[3], &proof, &root, 3, 7).is_err(), "改兄弟哈希必须被拒");
     }
 
     #[test]
@@ -276,31 +265,16 @@ mod tests {
         let ls = ids(6);
         let root = root_hex(&ls);
         let proof = prove(&ls, 2).unwrap();
-        assert!(
-            verify(&ls[2], &proof, &root, 1, 6).is_err(),
-            "换下标必须被拒"
-        );
+        assert!(verify(&ls[2], &proof, &root, 1, 6).is_err(), "换下标必须被拒");
         // ⚠️ 诚实边界：**同形的 count 无法区分**——i=2 在 5/6/7/8 叶树里的路径形状相同
         // （都是「左子树满 4 的第 2 个」），所以 proof 对这些 count 都自洽。
         // 包含证明承诺的是 **root**（根不同 ⇒ 一切不同），不是「总数」。
         // 这里用结构不同的 count=4 做负例（只有 2 层，路径长度对不上）。
-        assert!(
-            verify(&ls[2], &proof, &root, 2, 4).is_err(),
-            "换总数（结构不同）必须被拒"
-        );
-        assert!(
-            verify(&ls[2], &proof[..proof.len() - 1], &root, 2, 6).is_err(),
-            "证明缺一步必须被拒"
-        );
+        assert!(verify(&ls[2], &proof, &root, 2, 4).is_err(), "换总数（结构不同）必须被拒");
+        assert!(verify(&ls[2], &proof[..proof.len() - 1], &root, 2, 6).is_err(), "证明缺一步必须被拒");
         let mut extra = proof.clone();
-        extra.push(ProofStep {
-            sibling_right: true,
-            hash: canon::hex(&[0u8; 32]),
-        });
-        assert!(
-            verify(&ls[2], &extra, &root, 2, 6).is_err(),
-            "证明多一步必须被拒"
-        );
+        extra.push(ProofStep { sibling_right: true, hash: canon::hex(&[0u8; 32]) });
+        assert!(verify(&ls[2], &extra, &root, 2, 6).is_err(), "证明多一步必须被拒");
     }
 
     #[test]
