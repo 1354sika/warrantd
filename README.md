@@ -27,7 +27,7 @@ in a ledger you can recompute without trusting anyone.
 
 > Does the claim match the world? · What changed that nobody claimed? · What happened while you weren't looking?
 
-`1.5 MB · single binary · no runtime dependencies · Apache-2.0`
+`1.5 MB · single binary · no runtime dependencies`
 
 ---
 
