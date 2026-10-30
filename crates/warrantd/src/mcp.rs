@@ -53,7 +53,10 @@ pub fn serve(repo: &Path) -> Result<(), String> {
         return Err("账本不可用".into());
     }
     drop(store_ok);
-    eprintln!("warrantd mcp: 就绪（项目 {}），等 host 说话", repo.display());
+    eprintln!(
+        "warrantd mcp: 就绪（项目 {}），等 host 说话",
+        repo.display()
+    );
 
     let stdin = std::io::stdin();
     let stdout = std::io::stdout();
@@ -115,8 +118,8 @@ fn handle(repo: &Path, line: &str) -> Option<J> {
             "serverInfo": {"name": "warrantd", "version": env!("CARGO_PKG_VERSION")},
             // 让 host 知道这是个「观测面」而不是「命令执行器」
             "instructions": "信使：打开 AI 的观测面。开工前可先调 warrant_status 看我盯了什么、看不见什么；\
-怀疑信息过期就调 warrant_since；想知道有没有人偷偷改东西就调 warrant_unreported；\
-你说自己改完某样东西之后可以调 warrant_check 核对。"
+        怀疑信息过期就调 warrant_since；想知道有没有人偷偷改东西就调 warrant_unreported；\
+        你说自己改完某样东西之后可以调 warrant_check 核对。"
         }))),
         "ping" => Some(ok(json!({}))),
         "tools/list" => Some(ok(json!({"tools": tool_list()}))),
@@ -158,7 +161,7 @@ fn tool_list() -> J {
         {
             "name": "warrant_status",
             "description": "开工前先看：信使在盯哪些文件、账本在哪、有几个未申报变更，以及「我看不见什么」。\
-什么时候该用：开始干一段活之前，或者怀疑自己拿到的信息已经过期时。",
+    什么时候该用：开始干一段活之前，或者怀疑自己拿到的信息已经过期时。",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -179,19 +182,19 @@ fn tool_list() -> J {
         {
             "name": "warrant_unreported",
             "description": "有哪些文件变了，但没有任何 agent 申报过。什么时候该用：想知道有没有人在偷偷改东西，\
-或者交付前做一次对账。",
+    或者交付前做一次对账。",
             "inputSchema": {"type": "object", "properties": {}}
         },
         {
             "name": "warrant_admit",
             "description": "准入自检：你现在到底有多可观测（L0 盲 / L1 事后 / L2 持续 / L3 全经），以及离下一级差什么。\
-什么时候该用：开始一段重要工作之前，确认「我做的事真能被看见吗」。",
+    什么时候该用：开始一段重要工作之前，确认「我做的事真能被看见吗」。",
             "inputSchema": {"type": "object", "properties": {}}
         },
         {
             "name": "warrant_check",
             "description": "核对一条声明：它说的和账本里的观测对得上吗、有几条独立证据支撑。\
-什么时候该用：你说自己改完了某样东西之后。",
+    什么时候该用：你说自己改完了某样东西之后。",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -214,27 +217,50 @@ fn call_tool(repo: &Path, name: &str, args: &J) -> Result<String, String> {
     let note = freshness_note.as_deref().unwrap_or("");
     match name {
         "warrant_status" => {
-            let detail = args.get("detail").and_then(|d| d.as_bool()).unwrap_or(false);
+            let detail = args
+                .get("detail")
+                .and_then(|d| d.as_bool())
+                .unwrap_or(false);
             let st = store::Store::open(repo)?;
             let (watch, src) = watch_of(repo);
-            let unreported = slices::unreported(st.entries()).iter().map(|u| u.changes.len()).sum::<usize>();
+            let unreported = slices::unreported(st.entries())
+                .iter()
+                .map(|u| u.changes.len())
+                .sum::<usize>();
             // 只算两个数就够 —— 其余字段由下面的文本直接渲染（不要再拼一层 JSON）
-            let n_files = watch.iter().filter(|r| !repo.join(r.as_str()).is_dir()).count();
-            let n_dirs = watch.iter().filter(|r| repo.join(r.as_str()).is_dir()).count();
+            let n_files = watch
+                .iter()
+                .filter(|r| !repo.join(r.as_str()).is_dir())
+                .count();
+            let n_dirs = watch
+                .iter()
+                .filter(|r| repo.join(r.as_str()).is_dir())
+                .count();
             // 返回**人读文本**而不是 JSON：MCP 的 text 字段本来就是给模型/人读的，
             // 再套一层 JSON 会让 agent 多一次转义解析（真机上就是这么暴露的）。
             let mut t = String::new();
-            t.push_str(&format!("项目：{}
-", repo.display()));
-            t.push_str(&format!("账本：offset={}，链完整={}，锁空闲={}
-", st.logical_offset(), st.verify().is_empty(), store::lock_is_free(repo)));
+            t.push_str(&format!(
+                "项目：{}
+",
+                repo.display()
+            ));
+            t.push_str(&format!(
+                "账本：offset={}，链完整={}，锁空闲={}
+",
+                st.logical_offset(),
+                st.verify().is_empty(),
+                store::lock_is_free(repo)
+            ));
             t.push_str(&format!(
                 "观测面：{} 个文件（内容级）+ {} 个目录（结构级），来源：{}
 ",
                 n_files, n_dirs, src
             ));
-            t.push_str(&format!("未申报变更：{}
-", unreported));
+            t.push_str(&format!(
+                "未申报变更：{}
+",
+                unreported
+            ));
             t.push_str(&format!(
                 "上次观测：{}
 ",
@@ -256,12 +282,17 @@ fn call_tool(repo: &Path, name: &str, args: &J) -> Result<String, String> {
             // 分三组渲染（做不到 / 还没做 / 你选的形态）——两边共用同一份数据，不许各写一套
             t.push_str(&format!("\n{}\n", blind_spots_text()));
             if detail {
-                t.push_str("
+                t.push_str(
+                    "
 观测白名单：
-");
+",
+                );
                 for d in probe::WHITELIST {
-                    t.push_str(&format!("· {} （申报 {}，真实上限 {}）{}
-", d.id, d.tier, d.tier_hint, d.desc));
+                    t.push_str(&format!(
+                        "· {} （申报 {}，真实上限 {}）{}
+",
+                        d.id, d.tier, d.tier_hint, d.desc
+                    ));
                 }
             }
             Ok(with_note(t, note))
@@ -280,16 +311,26 @@ fn call_tool(repo: &Path, name: &str, args: &J) -> Result<String, String> {
                 rep.world.len()
             ));
             for i in &rep.items {
-                t.push_str(&format!("· seq={} {} {}（{}）
-", i.seq, i.kind, i.type_, i.actor));
+                t.push_str(&format!(
+                    "· seq={} {} {}（{}）
+",
+                    i.seq, i.kind, i.type_, i.actor
+                ));
             }
             if !rep.unreported.is_empty() {
-                t.push_str(&format!("
+                t.push_str(&format!(
+                    "
 其中没被任何 agent 申报过的 {} 条：
-", rep.unreported.len()));
+",
+                    rep.unreported.len()
+                ));
                 for u in &rep.unreported {
-                    t.push_str(&format!("· {}（{}）
-", u.path, u.kind.as_str()));
+                    t.push_str(&format!(
+                        "· {}（{}）
+",
+                        u.path,
+                        u.kind.as_str()
+                    ));
                 }
             }
             Ok(with_note(t, note))
@@ -317,11 +358,18 @@ fn call_tool(repo: &Path, name: &str, args: &J) -> Result<String, String> {
             }
             let mut t = String::new();
             if items.is_empty() {
-                t.push_str(&format!("没有未申报变更。（忽略规则 {} 条，排除了 {} 条预期副作用）
-", rules.len(), excluded));
+                t.push_str(&format!(
+                    "没有未申报变更。（忽略规则 {} 条，排除了 {} 条预期副作用）
+",
+                    rules.len(),
+                    excluded
+                ));
             } else {
-                t.push_str(&format!("有 {} 个变更没有任何 agent 申报过：
-", items.len()));
+                t.push_str(&format!(
+                    "有 {} 个变更没有任何 agent 申报过：
+",
+                    items.len()
+                ));
                 for i in &items {
                     let wf = i["window_from"].as_str().unwrap_or("");
                     let wt = i["window_to"].as_str().unwrap_or("");
@@ -335,12 +383,18 @@ fn call_tool(repo: &Path, name: &str, args: &J) -> Result<String, String> {
                         if wt.is_empty() { "?" } else { wt }
                     ));
                 }
-                t.push_str(&format!("
+                t.push_str(&format!(
+                    "
 （忽略规则 {} 条，另外排除了 {} 条预期副作用 —— 这些没被隐藏，只是不计入）
-", rules.len(), excluded));
+",
+                    rules.len(),
+                    excluded
+                ));
             }
-            t.push_str("
-这是负事实，不是错误。");
+            t.push_str(
+                "
+这是负事实，不是错误。",
+            );
             Ok(with_note(t, note))
         }
         "warrant_admit" => Ok(crate::admit::assess(repo).render()),
@@ -350,16 +404,30 @@ fn call_tool(repo: &Path, name: &str, args: &J) -> Result<String, String> {
                 .and_then(|c| c.as_str())
                 .ok_or("缺 claim_id")?;
             let st = store::Store::open(repo)?;
-            let v = slices::check_claim(st.entries(), cid).ok_or_else(|| format!("账本里没有这条：{cid}"))?;
+            let v = slices::check_claim(st.entries(), cid)
+                .ok_or_else(|| format!("账本里没有这条：{cid}"))?;
             let mut t = String::new();
-            t.push_str(&format!("条目：{}
-", v.claim_id));
-            t.push_str(&format!("状态：{}（{}）
-", v.state, v.label));
-            t.push_str(&format!("独立证据：{} 轴（{}），指向它的观测 {} 条
-", v.d_eff, v.axes.join("/"), v.observations));
-            t.push_str("
-注意：state/label 是「有几条独立证据」的结论，不是「对不对」的判决。");
+            t.push_str(&format!(
+                "条目：{}
+",
+                v.claim_id
+            ));
+            t.push_str(&format!(
+                "状态：{}（{}）
+",
+                v.state, v.label
+            ));
+            t.push_str(&format!(
+                "独立证据：{} 轴（{}），指向它的观测 {} 条
+",
+                v.d_eff,
+                v.axes.join("/"),
+                v.observations
+            ));
+            t.push_str(
+                "
+注意：state/label 是「有几条独立证据」的结论，不是「对不对」的判决。",
+            );
             Ok(t)
         }
         other => Err(format!("未知工具 `{other}`")),
@@ -465,35 +533,56 @@ pub fn blind_spots() -> &'static [BlindSpot] {
 ///
 /// **分两组打印**：做不到的在前（让人接受），没做的在后（那是我的账）。
 pub fn blind_spots_text() -> String {
-    let mut t = String::from("我看不见（观测面边界）：
-");
-    t.push_str("
+    let mut t = String::from(
+        "我看不见（观测面边界）：
+",
+    );
+    t.push_str(
+        "
 【做不到 · 结构性】
-");
+",
+    );
     for b in BLIND_SPOTS.iter().filter(|b| b.kind == Structural) {
-        t.push_str(&format!("· {} —— {}
-", b.what, b.why));
+        t.push_str(&format!(
+            "· {} —— {}
+",
+            b.what, b.why
+        ));
     }
-    t.push_str("
+    t.push_str(
+        "
 【还没做 · 能补（这是欠账，不是边界）】
-");
+",
+    );
     for b in BLIND_SPOTS.iter().filter(|b| b.kind == NotYet) {
-        t.push_str(&format!("· {} —— {}
-", b.what, b.why));
+        t.push_str(&format!(
+            "· {} —— {}
+",
+            b.what, b.why
+        ));
         if let Some(f) = b.fix {
-            t.push_str(&format!("   补法：{f}
-"));
+            t.push_str(&format!(
+                "   补法：{f}
+"
+            ));
         }
     }
-    t.push_str("
+    t.push_str(
+        "
 【你选的形态 · 取舍】
-");
+",
+    );
     for b in BLIND_SPOTS.iter().filter(|b| b.kind == ByChoice) {
-        t.push_str(&format!("· {} —— {}
-", b.what, b.why));
+        t.push_str(&format!(
+            "· {} —— {}
+",
+            b.what, b.why
+        ));
         if let Some(f) = b.fix {
-            t.push_str(&format!("   {f}
-"));
+            t.push_str(&format!(
+                "   {f}
+"
+            ));
         }
     }
     t
@@ -524,7 +613,6 @@ fn watch_of(repo: &Path) -> (Vec<String>, &'static str) {
     crate::sweep::watch_surface(repo)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -539,7 +627,11 @@ mod tests {
     #[test]
     fn initialize_reports_tools_capability() {
         let repo = tmp_repo("init");
-        let resp = handle(&repo, r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#).unwrap();
+        let resp = handle(
+            &repo,
+            r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#,
+        )
+        .unwrap();
         assert_eq!(resp["id"], 1);
         assert_eq!(resp["result"]["protocolVersion"], PROTOCOL_VERSION);
         assert!(resp["result"]["capabilities"]["tools"].is_object());
@@ -569,7 +661,13 @@ mod tests {
         );
         // 描述里必须有**触发语**（人和模型说这件事时的原话），否则模型不会想到用
         let all = list.to_string();
-        for trigger in ["开工前先看", "你上次看到之后", "没有任何 agent 申报过", "准入自检", "核对一条声明"] {
+        for trigger in [
+            "开工前先看",
+            "你上次看到之后",
+            "没有任何 agent 申报过",
+            "准入自检",
+            "核对一条声明",
+        ] {
             assert!(all.contains(trigger), "缺触发语「{trigger}」");
         }
     }
@@ -578,14 +676,22 @@ mod tests {
     #[test]
     fn notifications_get_no_reply() {
         let repo = tmp_repo("note");
-        assert!(handle(&repo, r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#).is_none());
+        assert!(handle(
+            &repo,
+            r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#
+        )
+        .is_none());
         let _ = std::fs::remove_dir_all(&repo);
     }
 
     #[test]
     fn unknown_method_returns_jsonrpc_error_not_panic() {
         let repo = tmp_repo("unk");
-        let resp = handle(&repo, r#"{"jsonrpc":"2.0","id":9,"method":"tools/whatever"}"#).unwrap();
+        let resp = handle(
+            &repo,
+            r#"{"jsonrpc":"2.0","id":9,"method":"tools/whatever"}"#,
+        )
+        .unwrap();
         assert_eq!(resp["error"]["code"], -32601);
         let _ = std::fs::remove_dir_all(&repo);
     }
@@ -594,7 +700,10 @@ mod tests {
     #[test]
     fn protocol_layer_accepts_floats_that_ledger_parser_rejects() {
         let line = r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"warrant_since","arguments":{"offset":0,"_x":1.5}}}"#;
-        assert!(warrant::json::parse(line).is_err(), "前提：严格解析器必须拒浮点");
+        assert!(
+            warrant::json::parse(line).is_err(),
+            "前提：严格解析器必须拒浮点"
+        );
         let repo = tmp_repo("float");
         let resp = handle(&repo, line).expect("协议层必须能处理");
         assert!(
@@ -614,7 +723,10 @@ mod tests {
         .unwrap();
         let text = resp["result"]["content"][0]["text"].as_str().unwrap();
         // 返回**人读文本**（不是 JSON 套 JSON）：agent 是模型，读自然语言没障碍
-        assert!(!text.trim_start().starts_with('{'), "不该再返回一层 JSON：{text}");
+        assert!(
+            !text.trim_start().starts_with('{'),
+            "不该再返回一层 JSON：{text}"
+        );
         assert!(text.contains("我看不见"), "盲区必须自报：{text}");
         assert!(text.contains("offset="), "要给出水位：{text}");
         let _ = std::fs::remove_dir_all(&repo);
@@ -653,7 +765,10 @@ mod tests {
         .to_string();
         let resp = handle(&repo, &line).unwrap();
         let text = resp["result"]["content"][0]["text"].as_str().unwrap();
-        assert!(text.contains("独立证据"), "check 要回答「有几条独立证据」：{text}");
+        assert!(
+            text.contains("独立证据"),
+            "check 要回答「有几条独立证据」：{text}"
+        );
         assert!(
             text.contains("不是「对不对」的判决"),
             "必须写明它不判决真假：{text}"

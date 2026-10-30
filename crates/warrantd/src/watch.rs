@@ -55,11 +55,17 @@ impl Watcher {
             let target = if p.is_dir() {
                 p.clone()
             } else {
-                p.parent().map(|x| x.to_path_buf()).unwrap_or_else(|| p.clone())
+                p.parent()
+                    .map(|x| x.to_path_buf())
+                    .unwrap_or_else(|| p.clone())
             };
             // 判「盯上了」看**目标本身是否存在** —— 盯父目录只是为了拿到事件，
             // 不代表那个文件真的在（否则不存在的路径也会被算成已盯上，虚报覆盖率）。
-            if p.exists() && inner.watch(&target, notify::RecursiveMode::Recursive).is_ok() {
+            if p.exists()
+                && inner
+                    .watch(&target, notify::RecursiveMode::Recursive)
+                    .is_ok()
+            {
                 watched.push(p);
             }
         }

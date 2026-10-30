@@ -68,7 +68,13 @@ pub fn sweep_with_events(
     let claim = if changes.is_empty() {
         String::new()
     } else {
-        let cid = st.append_world_change(&changes, watch.len(), &window_from, &window_to, event_counts)?;
+        let cid = st.append_world_change(
+            &changes,
+            watch.len(),
+            &window_from,
+            &window_to,
+            event_counts,
+        )?;
         // 观测条目指向这条 claim：result 与 claim.expect 同形 ⇒ 切片① 直接判 consistent。
         // 语义诚实：这条观测**确实看到了**它自己声明的那批变更（同一次 scan 的产物）。
         let ob = Observed {
@@ -244,8 +250,7 @@ mod tests {
             .iter()
             .rev()
             .find(|e| {
-                e.body.get("type").and_then(|x| x.as_str())
-                    == Some(crate::store::T_WORLD_CHANGE)
+                e.body.get("type").and_then(|x| x.as_str()) == Some(crate::store::T_WORLD_CHANGE)
             })
             .expect("应有一条世界变更");
         let got = entry

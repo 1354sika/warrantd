@@ -28,9 +28,9 @@ pub mod slices;
 pub mod snapshot;
 pub mod store;
 pub mod sweep;
-pub mod watch;
 pub mod ui;
 pub mod util;
+pub mod watch;
 
 /// 观测白名单的契约版本：**新增/删除原语、改档位必须升号**（与 `RULESET_VERSION` 同一纪律）。
 pub const PROBE_SPEC_VERSION: &str = "warrantd.probe/1";

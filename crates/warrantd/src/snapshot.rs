@@ -67,7 +67,11 @@ pub fn snapshot_path(repo: &Path) -> PathBuf {
 pub fn load(repo: &Path) -> Option<Snapshot> {
     let text = std::fs::read_to_string(snapshot_path(repo)).ok()?;
     let v = warrant::json::parse(&text).ok()?;
-    let at = v.get("at").and_then(|x| x.as_str()).unwrap_or("").to_string();
+    let at = v
+        .get("at")
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string();
     let mut files = BTreeMap::new();
     if let Some(Value::Object(pairs)) = v.get("files") {
         for (k, vv) in pairs {
@@ -90,7 +94,12 @@ pub fn load(repo: &Path) -> Option<Snapshot> {
 pub fn save(repo: &Path, snap: &Snapshot) -> Result<(), String> {
     let dir = repo.join(crate::LEDGER_DIR);
     std::fs::create_dir_all(&dir).map_err(|e| format!("create {}: {e}", dir.display()))?;
-    let mtimes = Value::Object(snap.mtimes.iter().map(|(k, v)| (k.clone(), Value::Int(*v))).collect());
+    let mtimes = Value::Object(
+        snap.mtimes
+            .iter()
+            .map(|(k, v)| (k.clone(), Value::Int(*v)))
+            .collect(),
+    );
     let v = obj(vec![
         ("at", s(&snap.at)),
         ("files", crate::probe::hash_map_json(&snap.files)),
@@ -200,7 +209,10 @@ mod tests {
     fn snap(pairs: &[(&str, &str)]) -> Snapshot {
         Snapshot {
             at: "t".into(),
-            files: pairs.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect(),
+            files: pairs
+                .iter()
+                .map(|(a, b)| (a.to_string(), b.to_string()))
+                .collect(),
             mtimes: BTreeMap::new(),
         }
     }
@@ -256,7 +268,10 @@ mod tests {
     #[test]
     fn first_scan_is_baseline_not_flood() {
         let new = snap(&[("a.rs", "sha256:1"), ("b.rs", "sha256:2")]);
-        assert!(diff(None, &new).is_empty(), "首扫必须只建基线，不能把整个仓库报成 added");
+        assert!(
+            diff(None, &new).is_empty(),
+            "首扫必须只建基线，不能把整个仓库报成 added"
+        );
     }
 
     #[test]

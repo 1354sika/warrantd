@@ -37,7 +37,9 @@ pub fn active_ruling(entries: &[Entry]) -> Option<(usize, bool)> {
         }
         let human_frozen = e.signatures.iter().any(|s| {
             s.get("role").and_then(|x| x.as_str()) == Some("freeze")
-                && s.get("signer").and_then(|x| x.get("kind")).and_then(|x| x.as_str())
+                && s.get("signer")
+                    .and_then(|x| x.get("kind"))
+                    .and_then(|x| x.as_str())
                     == Some("human")
         });
         if human_frozen {
@@ -135,7 +137,15 @@ pub fn state(
 ) -> &'static str {
     // [PERF-2026-10-05] 公开签名**保持不动**（外部与测试逐字节同形）：单次调用 = 建一次 O(n) 索引，
     // 与旧实现同代价。**批量判定请走 project** —— 它在全量上只建一次索引。
-    state_indexed(&rank::JudgeIndex::build(all), gate, entry, obs, superseded, grants, now)
+    state_indexed(
+        &rank::JudgeIndex::build(all),
+        gate,
+        entry,
+        obs,
+        superseded,
+        grants,
+        now,
+    )
 }
 
 /// [PERF-2026-10-05] state 的**预建索引**版：唯一差别是把「每次现建的全账本索引」换成调用方共享的一份。
@@ -166,7 +176,11 @@ fn state_indexed(
     }
     if type_of(entry) == Some(T_GRANT) {
         // grant 自举：有效性只由人类的 freeze 签名决定
-        return if has_role(entry, "freeze") { "WARRANTED" } else { "PROPOSED" };
+        return if has_role(entry, "freeze") {
+            "WARRANTED"
+        } else {
+            "PROPOSED"
+        };
     }
     let v = verdicts(entry, obs);
     if v.iter().any(|(x, _)| *x == "contradicted") {
@@ -271,7 +285,10 @@ pub fn project(entries: &[Entry], now: Option<&str>) -> Vec<(String, &'static st
         .iter()
         .map(|e| {
             let o: &[&Entry] = obs.get(&e.id).map(|v| v.as_slice()).unwrap_or(&[]);
-            (e.id.clone(), state_indexed(&jidx, gate, e, o, &superseded, Some(&grants), now))
+            (
+                e.id.clone(),
+                state_indexed(&jidx, gate, e, o, &superseded, Some(&grants), now),
+            )
         })
         .collect()
 }

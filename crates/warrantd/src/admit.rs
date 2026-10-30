@@ -227,7 +227,10 @@ mod tests {
         let d = tmp("blind");
         let a = assess(&d);
         assert_eq!(a.level, 0, "空项目必须是 L0：{}", a.render());
-        assert!(a.checks.iter().any(|c| !c.ok && c.fix.is_some()), "不满足的项必须带补法");
+        assert!(
+            a.checks.iter().any(|c| !c.ok && c.fix.is_some()),
+            "不满足的项必须带补法"
+        );
         let _ = std::fs::remove_dir_all(&d);
     }
 

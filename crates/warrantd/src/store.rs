@@ -169,7 +169,10 @@ pub fn all_entries(repo: &Path) -> Result<Vec<ledger::Entry>, String> {
     }
     vols.sort();
     let mut out: Vec<ledger::Entry> = Vec::new();
-    for v in vols.iter().chain(std::iter::once(&dir.join("entries.jsonl"))) {
+    for v in vols
+        .iter()
+        .chain(std::iter::once(&dir.join("entries.jsonl")))
+    {
         if let Ok(text) = std::fs::read_to_string(v) {
             if let Ok(mut es) = ledger::load_jsonl(&text) {
                 out.append(&mut es);
@@ -188,7 +191,12 @@ pub fn all_entries(repo: &Path) -> Result<Vec<ledger::Entry>, String> {
 /// 首卷（bootstrap）没有上一卷，跳过。
 ///
 /// 返回 `(卷清单, 错误)` —— 卷清单给 `--all` 打印，错误为空才算通过。
-pub fn verify_all(repo: &Path) -> Result<(Vec<(String, usize)>, Vec<String>), String> {
+/// 一卷的验证结果：`(卷名, 条数)`。
+///
+/// [CLIPPY-2026-10-30] 起个别名 —— `verify_all` 的返回类型原本复杂到 clippy 要报警。
+pub type VolumeSummary = (String, usize);
+
+pub fn verify_all(repo: &Path) -> Result<(Vec<VolumeSummary>, Vec<String>), String> {
     let dir = repo.join(crate::LEDGER_DIR);
     let mut vols: Vec<PathBuf> = Vec::new();
     if let Ok(rd) = std::fs::read_dir(dir.join(VOLUMES)) {
@@ -200,12 +208,15 @@ pub fn verify_all(repo: &Path) -> Result<(Vec<(String, usize)>, Vec<String>), St
         }
     }
     vols.sort();
-    let mut list: Vec<(String, usize)> = Vec::new();
+    let mut list: Vec<VolumeSummary> = Vec::new();
     let mut errs: Vec<String> = Vec::new();
     let mut prev_head = String::new();
     let mut prev_name = String::new();
 
-    for v in vols.iter().chain(std::iter::once(&dir.join("entries.jsonl"))) {
+    for v in vols
+        .iter()
+        .chain(std::iter::once(&dir.join("entries.jsonl")))
+    {
         let text = match std::fs::read_to_string(v) {
             Ok(t) => t,
             Err(e) => {
@@ -310,7 +321,9 @@ fn refresh_entries(
     for (i, e) in fresh.iter().enumerate() {
         let want = (start + i) as i64;
         if canon::event_id(&e.body).ok().as_deref() != Some(e.id.as_str()) {
-            return Err(format!("entry {want}: id 与 body 不符（账本可能被外部改写）"));
+            return Err(format!(
+                "entry {want}: id 与 body 不符（账本可能被外部改写）"
+            ));
         }
         let ch = e.body.get("chain");
         let seq = ch.and_then(|c| c.get("seq")).and_then(|s| s.as_int());
@@ -324,7 +337,9 @@ fn refresh_entries(
             .and_then(|s| s.as_str())
             .unwrap_or("");
         if pv != prev {
-            return Err(format!("entry {want}: chain.prev 接不上（账本可能被外部改写）"));
+            return Err(format!(
+                "entry {want}: chain.prev 接不上（账本可能被外部改写）"
+            ));
         }
         if e.body.get("type").and_then(|x| x.as_str()) == Some(projection::T_GRANT) {
             last_grant = Some(e.id.clone());
@@ -421,7 +436,10 @@ impl Store {
     ///
     /// 为什么必须重读：别的进程可能已经追加了若干条，不重读就会用过期 `seq` 算链位 ⇒ 链断。
     /// 链断不是「有点乱」，而是**整本账作废**（`verify_chain` 从 seq 0 起逐条对，错一位即全废）。
-    fn with_write<T>(&mut self, f: impl FnOnce(&mut Self) -> Result<T, String>) -> Result<T, String> {
+    fn with_write<T>(
+        &mut self,
+        f: impl FnOnce(&mut Self) -> Result<T, String>,
+    ) -> Result<T, String> {
         if self.lock.is_none() {
             self.lock = Some(acquire_lock(&self.dir)?);
             // [PERF-2026-10-29] 增量续读：账本没变就是 O(1)（原先每次全量重读 + 验链）
@@ -502,7 +520,11 @@ impl Store {
             if this.entries.len() < 2 {
                 return Err("账本不足 2 条，不需要封卷".to_string());
             }
-            let head = this.entries.last().map(|e| e.id.clone()).unwrap_or_default();
+            let head = this
+                .entries
+                .last()
+                .map(|e| e.id.clone())
+                .unwrap_or_default();
             let count = this.entries.len();
             // 累计总数 = 此前已封各卷 + 本卷 ⇒ 跨卷单调，offset 不回退
             let total = this.base_offset() + count;
@@ -615,7 +637,10 @@ impl Store {
             ("kind", s("claim")),
             ("type", s(projection::T_GRANT)),
             ("actor", obj(vec![("id", s(op)), ("kind", s("human"))])),
-            ("subject", obj(vec![("id", s("org:local")), ("kind", s("warrant.org"))])),
+            (
+                "subject",
+                obj(vec![("id", s("org:local")), ("kind", s("warrant.org"))]),
+            ),
             (
                 "action",
                 obj(vec![
@@ -678,7 +703,11 @@ impl Store {
         signer: Option<(&SigningKey, &str, &str)>,
     ) -> Result<String, String> {
         let seq = self.entries.len() as i64;
-        let prev = self.entries.last().map(|e| e.id.clone()).unwrap_or_default();
+        let prev = self
+            .entries
+            .last()
+            .map(|e| e.id.clone())
+            .unwrap_or_default();
         let mut pairs = match body {
             Value::Object(p) => p,
             _ => return Err("条目 body 必须是对象".to_string()),
@@ -709,7 +738,8 @@ impl Store {
             .append(true)
             .open(self.dir.join("entries.jsonl"))
             .map_err(|e| format!("open entries: {e}"))?;
-        f.write_all(&bytes).map_err(|e| format!("append entries: {e}"))?;
+        f.write_all(&bytes)
+            .map_err(|e| format!("append entries: {e}"))?;
         // 自己写的那条也要推进读指针，否则下次续读会把它当「新增」再解析一遍（重复条目）
         self.cursor += bytes.len() as u64;
         self.entries.push(entry);
@@ -727,7 +757,11 @@ impl Store {
     }
 
     /// 内部实现：**假定已持锁**（由 [`Self::with_write`] 保证）。
-    fn append_observation_locked(&mut self, ob: &Observed, subject: &str) -> Result<String, String> {
+    fn append_observation_locked(
+        &mut self,
+        ob: &Observed,
+        subject: &str,
+    ) -> Result<String, String> {
         let nonce = crate::util::nonce_for("warrantd:obs", &[&ob.method, &ob.observed_at, subject]);
         let now = now_rfc3339();
         let body = obj(vec![
@@ -735,9 +769,15 @@ impl Store {
             ("type", s(projection::T_OBS)),
             (
                 "actor",
-                obj(vec![("id", s(crate::SIGNER_ID)), ("kind", s(crate::SIGNER_KIND))]),
+                obj(vec![
+                    ("id", s(crate::SIGNER_ID)),
+                    ("kind", s(crate::SIGNER_KIND)),
+                ]),
             ),
-            ("subject", obj(vec![("id", s(subject)), ("kind", s("warrant.entry"))])),
+            (
+                "subject",
+                obj(vec![("id", s(subject)), ("kind", s("warrant.entry"))]),
+            ),
             (
                 "observation",
                 obj(vec![
@@ -749,7 +789,10 @@ impl Store {
                     ("result", ob.result.clone()),
                     ("evidence", crate::probe::evidence_json(&ob.evidence)),
                     ("observed_at", s(&ob.observed_at)),
-                    ("self_side_effects", crate::probe::evidence_json(&ob.self_side_effects)),
+                    (
+                        "self_side_effects",
+                        crate::probe::evidence_json(&ob.self_side_effects),
+                    ),
                 ]),
             ),
             (
@@ -794,9 +837,7 @@ impl Store {
         let wf = window_from.to_string();
         let wt = window_to.to_string();
         let counts = event_counts.clone();
-        self.with_write(move |s| {
-            s.append_world_change_locked(&changes, scanned, &wf, &wt, &counts)
-        })
+        self.with_write(move |s| s.append_world_change_locked(&changes, scanned, &wf, &wt, &counts))
     }
 
     /// 内部实现：**假定已持锁**。
@@ -811,7 +852,10 @@ impl Store {
         let count = changes.len() as i64;
         let nonce = crate::util::nonce_for(
             "warrantd:world",
-            &[&changes.first().map(|c| c.path.clone()).unwrap_or_default(), &now_rfc3339()],
+            &[
+                &changes.first().map(|c| c.path.clone()).unwrap_or_default(),
+                &now_rfc3339(),
+            ],
         );
         let now = now_rfc3339();
         let body = obj(vec![
@@ -826,7 +870,10 @@ impl Store {
             ),
             (
                 "subject",
-                obj(vec![("id", s("world:workspace")), ("kind", s("warrant.world"))]),
+                obj(vec![
+                    ("id", s("world:workspace")),
+                    ("kind", s("warrant.world")),
+                ]),
             ),
             (
                 "action",
@@ -935,7 +982,10 @@ impl Store {
                     ("kind", s(crate::SERVICE_SIGNER_KIND)),
                 ]),
             ),
-            ("subject", obj(vec![("id", s(path)), ("kind", s("warrant.path"))])),
+            (
+                "subject",
+                obj(vec![("id", s(path)), ("kind", s("warrant.path"))]),
+            ),
             // P1（`admission.rs:82`）：expect 的每个叶子都必须能在 action.args 里找到。
             // **形状刻意做成 `{路径: 哈希}`** —— 与 `probe::run_fs_hash` 的 result 同形，
             // 这样「agent 说 X=H」与「daemon 看到 X=H」能直接用 `projection::compare` 比对，
@@ -1045,7 +1095,10 @@ impl Store {
                     ("kind", s(crate::SERVICE_SIGNER_KIND)),
                 ]),
             ),
-            ("subject", obj(vec![("id", s(&subject)), ("kind", s("warrant.mcp"))])),
+            (
+                "subject",
+                obj(vec![("id", s(&subject)), ("kind", s("warrant.mcp"))]),
+            ),
             (
                 "action",
                 obj(vec![
@@ -1065,7 +1118,10 @@ impl Store {
                 ]),
             ),
             // P1：expect 的每个叶子都必须能在 action.args 里找到
-            ("expect", obj(vec![("server", s(server)), ("tool", s(tool))])),
+            (
+                "expect",
+                obj(vec![("server", s(server)), ("tool", s(tool))]),
+            ),
             (
                 "authority",
                 obj(vec![
@@ -1099,7 +1155,12 @@ impl Store {
     }
 
     /// 记对应的**响应**（观测）：这次调用成功了没有、回了多大一坨。
-    pub fn append_mcp_result(&mut self, claim_id: &str, ok: bool, bytes: usize) -> Result<String, String> {
+    pub fn append_mcp_result(
+        &mut self,
+        claim_id: &str,
+        ok: bool,
+        bytes: usize,
+    ) -> Result<String, String> {
         let claim_id = claim_id.to_string();
         self.with_write(move |s| s.append_mcp_result_locked(&claim_id, ok, bytes))
     }
@@ -1117,9 +1178,15 @@ impl Store {
             ("type", s(projection::T_OBS)),
             (
                 "actor",
-                obj(vec![("id", s(crate::SIGNER_ID)), ("kind", s(crate::SIGNER_KIND))]),
+                obj(vec![
+                    ("id", s(crate::SIGNER_ID)),
+                    ("kind", s(crate::SIGNER_KIND)),
+                ]),
             ),
-            ("subject", obj(vec![("id", s(claim_id)), ("kind", s("warrant.entry"))])),
+            (
+                "subject",
+                obj(vec![("id", s(claim_id)), ("kind", s("warrant.entry"))]),
+            ),
             (
                 "observation",
                 obj(vec![
@@ -1137,7 +1204,9 @@ impl Store {
                     ("observed_at", s(&now)),
                     (
                         "evidence",
-                        arr(vec![s("warrantd proxy 亲眼看到的那一帧响应（旁路记录，未改写）")]),
+                        arr(vec![s(
+                            "warrantd proxy 亲眼看到的那一帧响应（旁路记录，未改写）",
+                        )]),
                     ),
                     ("self_side_effects", arr(vec![])),
                 ]),
@@ -1174,22 +1243,39 @@ fn load_or_gen_key(dir: &Path, name: &str) -> Result<SigningKey, String> {
     }
 }
 
-fn sign_with(key: &SigningKey, entry_id: &str, at: &str, signer_id: &str, signer_kind: &str) -> Value {
+fn sign_with(
+    key: &SigningKey,
+    entry_id: &str,
+    at: &str,
+    signer_id: &str,
+    signer_kind: &str,
+) -> Value {
     let payload = canon::sig_payload(entry_id, "declare", signer_id, at);
     let bytes = canon::sig_bytes(&payload).expect("sig payload 必须可规范序列化");
     let sig = key.sign(&bytes);
     obj(vec![
         ("alg", s("ed25519")),
-        ("key_id", s(&format!("ed25519:{}", canon::hex(&key.verifying_key().to_bytes())))),
+        (
+            "key_id",
+            s(&format!(
+                "ed25519:{}",
+                canon::hex(&key.verifying_key().to_bytes())
+            )),
+        ),
         ("over", s(entry_id)),
         ("role", s("declare")),
         ("sig", s(&b64url(&sig.to_bytes()))),
         ("signed_at", s(at)),
-        ("signer", obj(vec![("id", s(signer_id)), ("kind", s(signer_kind))])),
+        (
+            "signer",
+            obj(vec![("id", s(signer_id)), ("kind", s(signer_kind))]),
+        ),
     ])
 }
 
 fn decode_hex(text: &str) -> Option<Vec<u8>> {
+    // [CLIPPY-2026-10-30] 同 ledger.rs：`is_multiple_of` 要 Rust 1.87，本项目 MSRV 是 1.85
+    #[allow(clippy::manual_is_multiple_of)]
     if text.len() % 2 != 0 {
         return None;
     }
@@ -1252,7 +1338,11 @@ mod tests {
         let oid = st.append_observation(&ob, &gid).unwrap();
         assert!(oid.starts_with("sha256:"));
         assert_eq!(st.offset(), 2);
-        assert!(st.verify().is_empty(), "链与签名必须都过：{:?}", st.verify());
+        assert!(
+            st.verify().is_empty(),
+            "链与签名必须都过：{:?}",
+            st.verify()
+        );
 
         // 重开：能从盘上读回、能验、grant 仍指向同一个
         let st2 = Store::open(&repo).unwrap();
@@ -1272,7 +1362,15 @@ mod tests {
             from: Some("sha256:1".into()),
             to: Some("sha256:2".into()),
         }];
-        let id = st.append_world_change(&changes, 10, "", "2026-10-28T00:00:00Z", &Default::default()).unwrap();
+        let id = st
+            .append_world_change(
+                &changes,
+                10,
+                "",
+                "2026-10-28T00:00:00Z",
+                &Default::default(),
+            )
+            .unwrap();
         assert!(id.starts_with("sha256:"));
         assert!(st.verify().is_empty());
         let _ = std::fs::remove_dir_all(&repo);
@@ -1295,7 +1393,9 @@ mod tests {
         let repo = tmp_repo("tamper");
         {
             let mut st = Store::open(&repo).unwrap();
-            let _ = st.append_agent_claim("agent:x", "a.rs", "sha256:1").unwrap();
+            let _ = st
+                .append_agent_claim("agent:x", "a.rs", "sha256:1")
+                .unwrap();
         }
         let p = repo.join(crate::LEDGER_DIR).join("entries.jsonl");
         let text = std::fs::read_to_string(&p).unwrap();
@@ -1307,7 +1407,10 @@ mod tests {
             Ok(_) => panic!("篡改必须被发现，但账本被静默接受了"),
             Err(e) => e,
         };
-        assert!(e.contains("不连续") || e.contains("tamper") || e.contains("无效"), "{e}");
+        assert!(
+            e.contains("不连续") || e.contains("tamper") || e.contains("无效"),
+            "{e}"
+        );
         let _ = std::fs::remove_dir_all(&repo);
     }
 
@@ -1351,7 +1454,9 @@ mod tests {
             .map(|a| a.to_vec())
             .unwrap_or_default();
         assert!(
-            parents.iter().any(|x| x.as_str() == Some(old_head.as_str())),
+            parents
+                .iter()
+                .any(|x| x.as_str() == Some(old_head.as_str())),
             "新卷首条的 parents 必须指向旧卷 head，否则谱系断了"
         );
 
@@ -1388,7 +1493,11 @@ mod tests {
 
         let v = Store::open(&repo).unwrap();
         assert_eq!(v.offset(), 4, "grant + 三条 claim");
-        assert!(v.verify().is_empty(), "增量读之后链仍必须完整：{:?}", v.verify());
+        assert!(
+            v.verify().is_empty(),
+            "增量读之后链仍必须完整：{:?}",
+            v.verify()
+        );
         let _ = std::fs::remove_dir_all(&repo);
     }
 
@@ -1436,7 +1545,8 @@ mod tests {
         a.append_agent_claim("agent:a", "x.rs", "sha256:1").unwrap();
         b.append_agent_claim("agent:b", "y.rs", "sha256:2").unwrap();
         a.append_agent_claim("agent:a", "z.rs", "sha256:3").unwrap();
-        b.append_world_change(&[], 0, "", "2026-10-28T00:00:01Z", &Default::default()).unwrap();
+        b.append_world_change(&[], 0, "", "2026-10-28T00:00:01Z", &Default::default())
+            .unwrap();
 
         let st = Store::open(&repo).unwrap();
         assert!(st.verify().is_empty(), "链/签名必须都过：{:?}", st.verify());
@@ -1445,7 +1555,13 @@ mod tests {
         let seqs: Vec<i64> = st
             .entries()
             .iter()
-            .map(|e| e.body.get("chain").and_then(|c| c.get("seq")).and_then(|x| x.as_int()).unwrap_or(-1))
+            .map(|e| {
+                e.body
+                    .get("chain")
+                    .and_then(|c| c.get("seq"))
+                    .and_then(|x| x.as_int())
+                    .unwrap_or(-1)
+            })
             .collect();
         assert_eq!(seqs, vec![0, 1, 2, 3, 4], "链位必须连续：{seqs:?}");
         let _ = std::fs::remove_dir_all(&repo);

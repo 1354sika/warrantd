@@ -126,7 +126,10 @@ fn parse_changes(v: Option<&Value>) -> Vec<Change> {
         out.push(Change {
             path: path.to_string(),
             kind,
-            from: it.get("from").and_then(|x| x.as_str()).map(|s| s.to_string()),
+            from: it
+                .get("from")
+                .and_then(|x| x.as_str())
+                .map(|s| s.to_string()),
             to: it.get("to").and_then(|x| x.as_str()).map(|s| s.to_string()),
         });
     }
@@ -215,10 +218,25 @@ pub fn since(entries: &[Entry], from: usize) -> SinceReport {
     let items: Vec<SinceItem> = tail
         .iter()
         .map(|e| SinceItem {
-            seq: e.body.get("chain").and_then(|c| c.get("seq")).and_then(|x| x.as_int()).unwrap_or(-1),
+            seq: e
+                .body
+                .get("chain")
+                .and_then(|c| c.get("seq"))
+                .and_then(|x| x.as_int())
+                .unwrap_or(-1),
             id: e.id.clone(),
-            kind: e.body.get("kind").and_then(|x| x.as_str()).unwrap_or("").to_string(),
-            type_: e.body.get("type").and_then(|x| x.as_str()).unwrap_or("").to_string(),
+            kind: e
+                .body
+                .get("kind")
+                .and_then(|x| x.as_str())
+                .unwrap_or("")
+                .to_string(),
+            type_: e
+                .body
+                .get("type")
+                .and_then(|x| x.as_str())
+                .unwrap_or("")
+                .to_string(),
             actor: e
                 .body
                 .get("actor")

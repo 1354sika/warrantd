@@ -135,7 +135,9 @@ fn system_dirs() -> Vec<PathBuf> {
         v.push(PathBuf::from("C:\\Program Files"));
         v.push(PathBuf::from("C:\\Program Files (x86)"));
     } else {
-        for d in ["/usr", "/etc", "/bin", "/sbin", "/var", "/boot", "/dev", "/proc", "/sys"] {
+        for d in [
+            "/usr", "/etc", "/bin", "/sbin", "/var", "/boot", "/dev", "/proc", "/sys",
+        ] {
             v.push(PathBuf::from(d));
         }
     }
@@ -212,7 +214,11 @@ mod tests {
     #[test]
     fn relative_repo_is_absolutized() {
         let r = resolve(Some("sub/dir")).unwrap();
-        assert!(r.root.is_absolute(), "相对路径必须绝对化：{}", r.root.display());
+        assert!(
+            r.root.is_absolute(),
+            "相对路径必须绝对化：{}",
+            r.root.display()
+        );
         assert!(r.root.ends_with("sub/dir") || r.root.ends_with("sub\\dir"));
     }
 
@@ -243,7 +249,10 @@ mod tests {
         // case 1：既无 .git 也无 .warrant ⇒ 拒绝，且错误里必须给出修法
         std::env::set_current_dir(&bare).unwrap();
         let e = match resolve(None) {
-            Ok(r) => panic!("不该接受一个既无 .git 也无 .warrant 的 cwd：{}", r.root.display()),
+            Ok(r) => panic!(
+                "不该接受一个既无 .git 也无 .warrant 的 cwd：{}",
+                r.root.display()
+            ),
             Err(e) => e,
         };
         assert!(

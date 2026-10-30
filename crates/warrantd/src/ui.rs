@@ -350,17 +350,40 @@ mod tests {
     #[test]
     fn blind_spots_are_split_and_not_yet_ones_carry_a_fix() {
         use crate::mcp::{BlindKind, BLIND_SPOTS};
-        let structural = BLIND_SPOTS.iter().filter(|b| b.kind == BlindKind::Structural).count();
-        let not_yet = BLIND_SPOTS.iter().filter(|b| b.kind == BlindKind::NotYet).count();
-        let by_choice = BLIND_SPOTS.iter().filter(|b| b.kind == BlindKind::ByChoice).count();
+        let structural = BLIND_SPOTS
+            .iter()
+            .filter(|b| b.kind == BlindKind::Structural)
+            .count();
+        let not_yet = BLIND_SPOTS
+            .iter()
+            .filter(|b| b.kind == BlindKind::NotYet)
+            .count();
+        let by_choice = BLIND_SPOTS
+            .iter()
+            .filter(|b| b.kind == BlindKind::ByChoice)
+            .count();
         assert!(structural >= 1, "至少要有结构性的一条");
         assert!(not_yet >= 1, "至少要有还没做的一条");
-        assert!(by_choice >= 1, "「你选的形态」要单独一类 —— 它既不是边界也不是欠账");
+        assert!(
+            by_choice >= 1,
+            "「你选的形态」要单独一类 —— 它既不是边界也不是欠账"
+        );
         for b in BLIND_SPOTS.iter().filter(|b| b.kind == BlindKind::NotYet) {
-            assert!(b.fix.is_some(), "「还没做」的必须给出补法，否则等于说「做不到」：{}", b.what);
+            assert!(
+                b.fix.is_some(),
+                "「还没做」的必须给出补法，否则等于说「做不到」：{}",
+                b.what
+            );
         }
-        for b in BLIND_SPOTS.iter().filter(|b| b.kind == BlindKind::Structural) {
-            assert!(b.fix.is_none(), "「做不到」的不该给补法（给了就说明它其实做得到）：{}", b.what);
+        for b in BLIND_SPOTS
+            .iter()
+            .filter(|b| b.kind == BlindKind::Structural)
+        {
+            assert!(
+                b.fix.is_none(),
+                "「做不到」的不该给补法（给了就说明它其实做得到）：{}",
+                b.what
+            );
         }
         // 文本渲染要分两组
         let t = crate::mcp::blind_spots_text();

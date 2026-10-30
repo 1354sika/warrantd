@@ -201,7 +201,9 @@ pub fn run(server_cmd: &[String], repo: &Path, server_name: &str) -> Result<(), 
         );
     });
 
-    let status = child.wait().map_err(|e| format!("等待 server 退出失败：{e}"))?;
+    let status = child
+        .wait()
+        .map_err(|e| format!("等待 server 退出失败：{e}"))?;
     let _ = t_up.join();
     let _ = t_down.join();
     if !status.success() {
@@ -268,7 +270,14 @@ fn record_call(
     let Ok(mut st) = store.lock() else {
         return;
     };
-    match st.append_mcp_call(server, &call.tool, &call.rpc_id, &call.args_keys, call.line_bytes, call.degraded) {
+    match st.append_mcp_call(
+        server,
+        &call.tool,
+        &call.rpc_id,
+        &call.args_keys,
+        call.line_bytes,
+        call.degraded,
+    ) {
         Ok(id) => {
             if !call.rpc_id.is_empty() {
                 if let Ok(mut p) = pending.lock() {
