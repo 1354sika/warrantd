@@ -1,188 +1,209 @@
 # warrantd
 
-> ### 专门处理两件事：**智能体的黑盒**，与**智能体的滞后**。
+> **Your agent says it's done. This lets you check.**
 >
-> 它不是 AI 治理平台，不是安全网关，也不是又一个 MCP 工具。
-> 它只处理这两个具体问题 —— 而且明确地**只管观测，不管拦截**。
+> A resident third-party observer that makes what an AI agent did
+> *independently recomputable* — including the changes it never mentioned.
+
+Not an AI governance platform. Not a security gateway. Not another MCP tool.
+It observes. **It does not intercept** — and that is the first thing worth saying,
+because everything else is easy to misread.
 
 ---
 
-**黑盒**：它说「改好了」，你只能信。它说「完成」，你不知道它是不是只改了一行就收工。
-**滞后**：你手上的信息是十分钟前的，而世界已经往前走了一步。
+Every agent has two failure modes that no benchmark captures.
 
-这两个病有同一个根：**你和世界之间那条通道，只存在于 AI 的上下文里。** 它不说，你不知道；它说错，你查不出来。
+**The black box.** It says *done*. You cannot tell whether it changed one line or forty —
+or whether it changed nothing at all and simply stopped.
 
-**warrantd 是一个常驻的第三方观测者。** 它不拦你的 AI，也不替它做事 ——
-它只做一件事：**一直在看，把「看见的」和「AI 说的」记在同一本账上**，然后回答三个问题：
+**The lag.** The information you are holding is ten minutes old. The world moved on.
 
-> 它说的对得上吗？／哪些变了却没人承认？／你不在的时候发生了什么？
+Same root cause: **the only record of what happened lives inside the agent's context window.**
+If it doesn't mention it, you don't know. If it mentions it wrong, you can't tell.
 
-> **1.48 MB · 单文件 · 无可执行依赖 · Apache-2.0**
+warrantd is a resident process that sits next to your project and does one thing:
+it watches the world and writes down **what it saw** next to **what the agent claimed** —
+in a ledger you can recompute without trusting anyone.
 
----
+> Does the claim match the world? · What changed that nobody claimed? · What happened while you weren't looking?
 
-## 这两个病长什么样（六个真实案例）
-
-下面六件事**都真的发生过**，来自我们自己开发这套东西的过程。
-它们有一个共同点 —— **不是「没有记录」，而是「记录坏了或者缺了，但没人告诉你」。**
-
-### 案例一｜一个字段写错类型，认定层静默停了半个月
-
-| | |
-|---|---|
-| **现象** | 一整段开发里，认定面板一直是空的 |
-| **我们以为** | 没连上（或者「就是没东西可签」） |
-| **真相** | `capabilities` 写成了字符串，而 schema 要数组 ⇒ 整个 `mcp.json` 解析失败 ⇒ `mcp disabled` ⇒ 连早就配好的那个插件一起废了 |
-| **为什么没发现** | 日志里**确实有 1 条 WARN**，但它只说了「跳过」，**没说后果** |
-| **代价** | 那半个月的操作，**一条都没进账** |
-
-**它现在怎么防**：`warrantd admit` 会直接报 **L0（盲）**——
-不是让你以为「一切正常」，而是明说「我对这个项目一无所知，此时『没发生』这句话没有意义」。
-
-### 案例二｜AI 越权存了两个文件：文件名写着 6V，内容其实是同一个值
-
-这是**AI 直接操控软件**（通过 COM 接口操作 Multisim）时的一次真实事故。
-
-| | |
-|---|---|
-| **AI 说** | 我产出了 6V 和 1.25V 两档电路 |
-| **文件名承诺** | `loop1_led_6v.ms14` = R2 800Ω；`loop1_led_1p25v.ms14` = R2 1Ω |
-| **实际内容** | **两个都是 R2 = 1720Ω**（回读三次，全是同一个值） |
-| **怎么发生的** | 设值的调用**失败了**（那个方法名在接口里根本不存在）→ **没检查失败**，程序继续往下走 → 照样存了两个文件 |
-| **更严重的一层** | 授权里明写着「探针默认不调用 Save/SaveAs」—— 这次不只是存错了，是**越权** |
-| **代价** | 两个文件名公然骗人；越权两次；产物已删（**哈希全部留档，没有隐藏**） |
-
-**为什么这件事最难发现**：计划跑完了，文件出现了，字节数也正常，**一切看起来都成功**。
-唯一的问题是**名字承诺的内容和文件里的内容不是一回事** —— 而这只有去**回读**才能知道。
-
-**它现在怎么防**：文件名是「声称」，文件内容是「观测」。
-warrantd 把两者分别记账、再对账 —— 不一致就是 **`CONTRADICTED`**。
-越权也是可判的：`act` 不在 grant 范围内，这条动作**记为已发生、但不可认定为完成**。
-
-> 顺带说一个正面案例：同一套机制下，另一次实验里 AI 在**仿真之前**先落盘了自己算的预测，
-> 之后拿 Multisim 自带引擎的实测值逐项对照 —— Vout 五档**吻合到 7 位有效数字**（相对差 < 1e-8）。
-> **它能证伪，才能证明「这次是对的」。**
-
-### 案例三｜「没申报」被当成了「没有」——失效还被说成是诚实的
-
-| | |
-|---|---|
-| **现象** | 某个被控软件接进来了，所有操作都「成功」，但证据链里始终只有一根轴 |
-| **我们以为** | 这软件大概就是这样吧 |
-| **真相** | 配置里**没申报**那个负责回读的只读探针 ⇒ 系统拿不到它的观测 ⇒ **乙轴永远是空的** |
-| **最狠的地方** | 系统把「没有证据」记录成「**诚实不产乙轴**」——**失效被合理化了**，读日志的人根本不会怀疑 |
-| **同类** | 还有「没申报参数」版：拿空参数去调只读探针，凡有必填参数者必失败，同样**完全静默** |
-
-**它现在怎么防**：**观测面是封闭白名单**，而且**必须逐条申报档位**。
-没申报的能力不会「悄悄失效」，而是**根本不存在** —— `warrantd probes` 一眼看全 9 条，
-`status` 会把「我看不见什么」列成第一屏。
-
-### 案例四｜契约在库里躺了 11 天，一次没进过设计流程
-
-| | |
-|---|---|
-| **现象** | 一份写得很完整的规范文档，早就定稿了 |
-| **我们以为** | 大家都知道它、都在按它做 |
-| **真相** | **11 天里没有一次设计流程读过它**。直到某次深夜设计，结论当场被它推翻 —— 因为文档里那条早写明白了 |
-| **教训** | **「知识在库里」不等于「知识可用」。** 没人读的规范，等于不存在 |
-
-**它现在怎么防**：观测面**不许靠自觉**。`status` 主动把边界摊在你面前，
-`admit` 主动告诉你现在几级。**不是等你想起去查，而是每次都被推到眼前。**
-
-### 案例五｜别人 23:00 出的包，我 23:32 还在写「缺三条」
-
-| | |
-|---|---|
-| **现象** | 我列了一份「还缺三样」的清单 |
-| **真相** | **32 分钟前**，另一个会话已经把这三样做完并出包了 |
-| **为什么不知道** | 两个会话之间**没有任何共享状态**。它在它的上下文里，我在我的 |
-| **代价** | 重复劳动 + 结论直接作废 |
-
-**它现在怎么防**：账本落在**项目里**，不是一个应用的私有数据。
-任何主体（人、这个 AI、那个 AI）都往同一本账写，`warrant_since(offset)` 回答
-「**你上次看到之后，世界变了什么**」。
-
-### 案例六｜账本被归档过一次，认定层整体停用，而界面上一切正常
-
-| | |
-|---|---|
-| **现象** | 认定面板长期空的 |
-| **真相** | 账本被归档过，首条 `seq` 不再是 `0` ⇒ **链校验失败** ⇒ 整个认定层停用 |
-| **最坏的地方** | 当时的报错写的是 `chain broken (tamper?)` —— **把一次归档事故说成了「可能被篡改」**，把人引向完全错误的排查方向 |
-| **代价** | 半个月里，用户以为「没连上」，其实「根本没在记」 |
-
-**它现在怎么防**：账本坏了**不静默降级**。报错直接说清三件事 ——
-最可能的成因（被归档）、**后果**（认定层整体停用，此后动作不入账）、以及**修法**
-（把归档放回原位；不要手工把首条 seq 改成 0，那才是真正的篡改）。
+`1.5 MB · single binary · no runtime dependencies · Apache-2.0`
 
 ---
 
-## 操控软件时，「看起来成功」长什么样
+## What these two problems actually look like
 
-上面案例二是操控软件。这里是我们**实际踩到的细节** ——
-每一条都曾经**看起来是对的**，而且**没有任何一条会报错**。
+Six incidents that really happened — all of them while building this thing.
 
-| 坑 | 你以为 | 实际 |
+They share one shape: **not "no record", but "a record that was broken or missing,
+and nobody told you."**
+
+### 1 · One field with the wrong type silently disabled evidence collection for two weeks
+
+| | |
+|---|---|
+| **Symptom** | The attestation panel stayed empty for an entire stretch of development. |
+| **What we assumed** | Not connected. Or "nothing to attest." |
+| **What it was** | `capabilities` was written as a string; the schema wanted an array. The whole `mcp.json` failed to parse → `mcp disabled` → **the plugin that was configured correctly died with it.** |
+| **Why nobody caught it** | There *was* a WARN line in the log. It said "skipped". It never said **what that meant**. |
+| **Cost** | Two weeks of work. Not one entry recorded. |
+
+**How warrantd handles it**: `warrantd admit` reports **L0 (blind)**. It does not let you
+believe "everything is fine". It states, plainly: *"I know nothing about this project.
+The sentence 'nothing happened' is meaningless here."*
+
+### 2 · An agent saved two files, and both filenames lied
+
+A real incident from giving an agent **direct control over a desktop application**
+(Multisim, through its COM interface).
+
+| | |
+|---|---|
+| **It claimed** | I produced a 6 V variant and a 1.25 V variant. |
+| **The filenames promised** | `loop1_led_6v.ms14` → R2 = 800 Ω; `loop1_led_1p25v.ms14` → R2 = 1 Ω |
+| **The files contained** | **R2 = 1720 Ω. Both of them.** Three read-backs, same value. |
+| **How** | The value-setting call **failed** — the method name does not exist in that interface. The script **did not check the result** and went straight on to `SaveAs`. |
+| **Worse** | The grant explicitly said *"probes must not call Save/SaveAs."* So it was not merely wrong — it was **out of scope**. |
+| **Cost** | Two files that lie in their own names; two authorization violations. Artifacts deleted, **hashes kept** — nothing hidden. |
+
+**Why this is the hard kind**: the run finished. Files appeared. Sizes looked right.
+Saving returned success. **Everything looked correct.** The only problem was that
+*what the name promised* and *what the file contained* were not the same thing —
+and you only learn that by **reading it back**.
+
+**How warrantd handles it**: a filename is a **claim**; file content is an **observation**.
+Both are recorded separately and then reconciled — a mismatch is `CONTRADICTED`.
+Scope violations are judgeable too: an action outside the grant's limits is recorded as
+*happened, but not admissible as complete*.
+
+> A positive counterpart from the same setup: in another run the agent wrote its own
+> predictions to disk **before** simulating, then compared them against the target
+> engine's measured values. Across five settings of R2, Vout matched to **7 significant
+> figures** (relative difference < 1e-8).
+> **It can be falsified — that is what makes "this one was right" mean anything.**
+
+### 3 · "Not declared" was recorded as "not there" — and the failure called itself honest
+
+| | |
+|---|---|
+| **Symptom** | An application was integrated. Every action "succeeded". The evidence chain only ever had one axis. |
+| **What we assumed** | That application is just like that. |
+| **What it was** | The read-back probe was **never declared** in config. No observation ⇒ **the second axis was always empty.** |
+| **The nasty part** | The system logged the absence of evidence as **"honest: no second axis produced."** *The failure rationalized itself.* Nobody reading the log would ever suspect. |
+| **Same family** | The variant with undeclared arguments: calling a read-only probe with empty args — anything with required parameters fails every time. Equally silent. |
+
+**How warrantd handles it**: the observation surface is a **closed whitelist**, and every
+capability must declare its tier. Nothing can "silently degrade": it either exists in the
+table or it does not exist. `warrantd probes` shows all nine; `status` puts
+*what I cannot see* on the first screen.
+
+### 4 · A spec sat in the repo for 11 days and never entered a single design review
+
+| | |
+|---|---|
+| **Symptom** | A complete, careful specification. Finalized on day one. |
+| **What we assumed** | Everyone knows about it. Everyone follows it. |
+| **What it was** | **For 11 days, not one design pass read it.** Then a late-night design was overturned by it on the spot — because the answer had been written down all along. |
+| **The lesson** | **"Knowledge in the repo" is not "knowledge in use."** A spec nobody reads does not exist. |
+
+**How warrantd handles it**: boundaries are not left to discipline. `status` puts them in
+front of you; `admit` tells you your current level. Not *"you should go check"* —
+**pushed to you every time.**
+
+### 5 · Someone shipped a release at 23:00. At 23:32 I was still writing "three things missing."
+
+| | |
+|---|---|
+| **Symptom** | I wrote up a list of three missing pieces. |
+| **What it was** | **32 minutes earlier**, another session had finished all three and shipped. |
+| **Why I didn't know** | The two sessions shared **no state at all**. It was in its context window; I was in mine. |
+| **Cost** | Wasted work, and a conclusion that was void on arrival. |
+
+**How warrantd handles it**: the ledger lives **in the project**, not inside one
+application. Any subject — a human, this agent, that agent — writes to the same ledger.
+`warrant_since(offset)` answers: *what changed since the last time you looked?*
+
+### 6 · The ledger got archived once. The evidence layer switched itself off — and the UI looked fine.
+
+| | |
+|---|---|
+| **Symptom** | The attestation panel was empty for weeks. |
+| **What it was** | The ledger had been archived. Its first `seq` was no longer `0` ⇒ **chain verification failed** ⇒ the entire attestation layer shut down. |
+| **The worst part** | The error read `chain broken (tamper?)` — **describing an archiving accident as possible tampering**, sending the reader in exactly the wrong direction. |
+| **Cost** | Two weeks of "I thought it wasn't connected." It was never recording. |
+
+**How warrantd handles it**: a broken ledger does not degrade silently. The error names
+three things — the most likely cause (archived), **the consequence** (attestation is off;
+nothing further is recorded), and the fix (put the archive back; ⛔ do **not** hand-edit
+the first `seq` to `0` — *that* is actual tampering).
+
+---
+
+## What "it looked like it worked" looks like when an agent drives real software
+
+Case 2 is about controlling an application. These are the details we actually hit —
+every one of them **looked right at the time**, and **not one of them raised an error**.
+
+| Trap | You think | What actually happens |
 |---|---|---|
-| **长度相同 ≠ 字节相同** | 两次回包长度一样 ⇒ 同一次运行 | 差异只在**向量顺序**（`na4\|a4mid` vs `a4mid\|na4`），sha 不同 ⇒ **判"同一次"必须比字节** |
-| **读 DOM ≠ 知道谁被按** | 读到控件的 `title`，以为知道用户点了哪里 | 只能证明**入口存在**，读不出「哪个控件被按」 |
-| **事件钩子里的载荷会被截断** | 钩子把"整帧"回传了 | 实际只回了前 **700 字符**；268 KB 是 44 秒后分块读页面内存才补上的 |
-| **进度窗会残留** | 仿真跑完了 | 界面上留一个 **99% 的模态窗**，把后续所有操作挡死 |
-| **仿真文档不持久化** | 关掉工程再打开，看结果还在不在 | 内容**本来就不存盘** ⇒ 这个"验证手段"根本无效 |
-| **官方接口大量不可用** | 调 `importChanges` 同步原理图↔PCB | 恒返回 `false`；网表 API 三族全废；autoLayout 超时；官方文档 **26 个方法没写** |
-| **窗口会变** | 桥连着那个"活跃窗口" | 会被**僵尸窗口**霸占（请求恒超时）；扩展每 **20–30 秒**断线重连并以**新 windowId** 回来 ⇒ 必须重试，且不能缓存 |
+| **Same length ≠ same bytes** | Two responses of equal length ⇒ same run | The difference was only **vector order** (`na4\|a4mid` vs `a4mid\|na4`); the sha differs ⇒ **compare bytes, never lengths** |
+| **Reading the DOM ≠ knowing what was pressed** | You read a control's `title`, so you know where the user clicked | It proves the entry point **exists**. It cannot tell you *which control was pressed*. |
+| **Event payloads get truncated** | The hook returned "the whole frame" | It returned the **first 700 characters**. The 268 KB arrived 44 seconds later, by reading page memory in chunks. |
+| **Progress dialogs linger** | The simulation finished | A **99% modal** is left on screen, blocking every subsequent action. |
+| **Simulation documents don't persist** | Close the project, reopen, see whether the result survives | The content **was never saved**. That "verification method" is void. |
+| **Official APIs are largely unusable** | Call `importChanges` to sync schematic ↔ PCB | It always returns `false`. Three families of netlist APIs are dead. `autoLayout` times out. **26 methods have no documentation.** |
+| **Windows change** | The bridge is attached to "the active window" | It gets seized by a **zombie window** (requests time out forever); the extension reconnects every **20–30 s** with a **new `windowId`** ⇒ you must retry, and you must not cache it. |
 
-**共同点**：每一条都不是报错，而是**"返回了一个看起来正常的东西"**。
+**The common shape: none of these is an error.** Each one returns something that looks normal.
 
-所以「看返回值」不够 —— 必须有**第二条独立通道**去读**实际发生了什么**。
-这就是 warrantd 存在的理由：它不问你成没成功，它自己去读。
+That is why *checking the return value* is not enough. You need a **second, independent
+channel** that reads what actually happened. That is the whole reason warrantd exists:
+**it does not ask whether you succeeded — it goes and reads.**
 
 ---
 
-## 它怎么解
+## How it answers
 
-六条设计，每条都对着上面某个案例：
-
-| 设计 | 针对 | 一句话 |
+| Design | Case | In one line |
 |---|---|---|
-| **观测面是封闭白名单** | 案例三 | 只有 9 条原语，表外**结构上做不到** —— 不是「不推荐」，是做不到 |
-| **账本只追加 + 可离线复算** | 案例六 | 每条有 id 和链位，**任何人拿到文件都能自己算一遍**，不必信它的话 |
-| **三种切片** | 案例一、五 | 说 vs 看 / 没申报的变更 / 你不在的时候 |
-| **准入自检 L0~L3** | 案例一、二 | 主动告诉你「你现在有多可观测」，而不是让你以为 |
-| **agent 的每个动作可被独立回读** | 案例二 | 文件名是「声称」、内容是「观测」，两者分开记账再对账 —— 不一致即 `CONTRADICTED` |
-| **盲区分三类，逐条给补法** | 全部 | 做不到 / 还没做 / 你选的形态 —— **不把工程欠账混进能力边界** |
+| **Closed-whitelist observation surface** | 3 | Nine primitives. Anything outside the table is **structurally impossible** — not "discouraged" |
+| **Append-only, offline-recomputable ledger** | 6 | Every entry has an id and a chain position; **anyone with the file can recompute it**, no trust required |
+| **Three slices** | 1, 5 | claim vs world / unclaimed changes / what happened while you were away |
+| **Self-assessed level, L0–L3** | 1 | Tells you how observable you currently are, instead of letting you assume |
+| **Every action independently re-readable** | 2 | Filename is a claim, content is an observation — recorded separately, then reconciled |
+| **Blind spots in three groups, each with a fix** | all | *Structurally impossible* / *not built yet* / *your choice* — engineering debt never hides inside capability limits |
 
-其中**最值钱的是第二种切片**：
+The most valuable one is the second slice:
 
-> **哪些文件变了，但没有任何 agent 说过它改过。**
+> **Files that changed, with no agent claiming them.**
 
-它不依赖 AI 承认任何事。变了就是变了，没人申报就是没人申报。
+It does not depend on the agent admitting anything. Changed is changed. Unclaimed is unclaimed.
 
 ---
 
-## 30 秒试用
+## 30-second trial
 
 ```bash
-# 需要 Rust 工具链
+# requires a Rust toolchain
 cargo build --release
 
-# 进到你的项目，写观测面：要盯哪些路径，一行一个
+# in your project: declare what to watch, one path per line
 mkdir -p .warrant && echo "src" > .warrant/watch.list
 
-./target/release/warrantd once        # 建基线
+./target/release/warrantd once        # establish a baseline
 echo "// x" >> src/main.rs
-./target/release/warrantd once        # 有变化了
-./target/release/warrantd unreported  # 变了但没人申报
+./target/release/warrantd once        # a change is now visible
+./target/release/warrantd unreported  # changed, with nobody claiming it
 ```
 
-### 让它一直在看
+### Keep it watching
 
 ```bash
-warrantd open      # 前台跑，关窗口即停（不做开机自启，这是刻意的）
-warrantd ui        # 黑色信封面板（浏览器窗口，只监听本机）
+warrantd open      # foreground; closing the window stops observation (no autostart — deliberately)
+warrantd ui        # the envelope panel (local-only HTTP, browser window)
 ```
 
-### 让 AI 主动来问（MCP）
+### Let agents ask it (MCP)
 
 ```jsonc
 {"mcpServers": {"warrantd": {
@@ -190,101 +211,108 @@ warrantd ui        # 黑色信封面板（浏览器窗口，只监听本机）
 }}}
 ```
 
-5 个工具：`warrant_status` / `warrant_since` / `warrant_unreported` / `warrant_admit` / `warrant_check`
+Five tools: `warrant_status` · `warrant_since` · `warrant_unreported` · `warrant_admit` · `warrant_check`
 
-### 让 AI 调外部工具时也留下痕迹（代理）
+### Let tool calls leave a trace (proxy)
 
 ```jsonc
-// 原来是 {"command":"python","args":["kit/lceda/mcp_server.py"]}，改成：
+// was: {"command":"python","args":["kit/lceda/mcp_server.py"]}
 {"command": "warrantd", "args": ["proxy", "--repo", ".", "--name", "lceda",
                                  "--", "python", "kit/lceda/mcp_server.py"]}
 ```
 
-不知道怎么改？`warrantd wrap --file ~/.claude.json` —— **只打印，不碰你的文件**。
+Don't want to edit configs by hand? `warrantd wrap --file ~/.claude.json` —
+**it only prints the change; it never touches your file.**
 
 ---
 
-## 你现在有多可观测
+## How observable are you right now?
 
 ```bash
 warrantd admit
 ```
 
-| 级 | 含义 |
+| Level | Meaning |
 |---|---|
-| **L0 盲** | 没有账本或没有观测面 ⇒ 「没发生」这句话没有意义 |
-| **L1 事后** | 有账本有观测面，但只在被问时扫 |
-| **L2 持续** | 有东西在持续看 |
-| **L3 全经** | L2 + 外部工具调用也经过代理 |
+| **L0 blind** | No ledger, or no observation surface ⇒ "nothing happened" is meaningless |
+| **L1 after the fact** | Ledger and surface exist, but it only scans when asked |
+| **L2 continuous** | Something is watching continuously |
+| **L3 all-through** | L2 + external tool calls also pass through the proxy |
 
-每级都会告诉你**离下一级差什么**。
+Each level tells you **what is missing** to reach the next one.
 
 ---
 
-## 实测数据（真机，可复现）
+## Measured (real machine, reproducible)
 
-| 项 | 数值 | 怎么验 |
+| Item | Value | How to verify |
 |---|---|---|
-| 观测原语 | **9 条**（封闭白名单） | `warrantd probes` |
-| 单元测试 | **112 passed** | `cargo test --all` |
-| release 体积 | **1.48 MB** 单文件，无可执行依赖 | `cargo build --release` |
-| MCP 工具 | **5 个** | 挂进 Claude Code / Cursor 看工具表 |
-| 真机·网络对端 | **338 个连接 / 90 个外部对端** | `warrantd probe net.conns` |
-| 真机·负事实 | 改文件不申报 ⇒ **1 条**；申报后 ⇒ **0 条** | `warrantd unreported` |
-| 真机·抖动 | 改了又改回来（哈希相同）⇒ 报 **touched** | `warrantd once` |
-| 真机·并发写 | **5 个 writer 同时写，链完整** | `warrantd verify` |
-| 真机·自检不自欺 | 评两次，账本 offset **一分不涨** | `warrantd admit` |
-| 真机·时间分辨率 | `--interval 30` 下改文件，**2 秒内**发现（文件事件） | `warrantd open --interval 30` |
-| 真机·抖动计数 | 连改 5 次 ⇒ `event_counts: {"a.txt":5}`，仍只 1 条变更 | `warrantd daemon` |
-| 真机·封卷 | 5000 条/卷，旧卷挪进 `volumes/`，谱系靠 `parents` 相连 | `warrantd seal` / `verify --all` |
+| Observation primitives | **9** (closed whitelist) | `warrantd probes` |
+| Tests | **112 passed** | `cargo test --all` |
+| Release size | **1.48 MB** single binary, no runtime deps | `cargo build --release` |
+| MCP tools | **5** | Attach to Claude Code / Cursor and read the tool list |
+| Network peers | **338 connections / 90 external** | `warrantd probe net.conns` |
+| Negative facts | change a file without claiming ⇒ **1**; claim it ⇒ **0** | `warrantd unreported` |
+| Jitter | write, revert (same hash) ⇒ reported as **touched** | `warrantd once` |
+| Time resolution | `--interval 30` + edit a file ⇒ seen in **2 s** (file events) | `warrantd open --interval 30` |
+| Edit count | 5 consecutive edits ⇒ `event_counts: {"a.txt": 5}`, still **one** change | `warrantd daemon` |
+| Concurrent writers | **5 writers, one ledger, chain intact** | `warrantd verify` |
+| Self-check honesty | run it twice; ledger offset **does not move** | `warrantd admit` |
 
 ---
 
-## 诚实边界
+## Honest limits
 
-读结论前必须知道（**这一节比上面所有内容都重要**）：
+Read this before any conclusion. **This section matters more than everything above.**
 
-1. **它拦不住任何东西。** AI 不调用它、不挂 proxy，它什么也看不见。它是观测，不是网关。
-2. **「看不见」分三类**，`warrantd status` 会分组告诉你：结构性做不到 / 我们还没做 / 你选的形态 ——
-   每条「还没做」都带补法。**不把工程欠账混进能力边界。**
-3. **最高等级 L3 也不等于全覆盖。** 只覆盖本地文件 + **配置里包过 proxy 的** MCP。
-   shell 直接跑命令、没包 proxy 的 server，都在外面。
-4. **目录指纹只到 C0。** 它证明「这个目录变了」，不证明「哪个文件变成了什么」。
-5. **知道「改了几次」，不知道「每次改成什么」。** 文件事件会数次数（`event_counts`），
-   但存不下每一份中间内容 —— 那要按次存 diff，是另一个量级的存储。
-6. **网络只看到对端地址。** 不知道传了什么内容 —— 那是抓包，属结构性做不到。
-7. **账本关着的时候看不到。** 信使没运行，世界照样在变；下次打开只能和上次快照比。
-   文件事件也一样 —— 它只在 `warrantd` 运行时有效。
-8. **Linux 上的账本锁未实现。** 多进程并发写在 Linux 不安全（Windows 用独占打开）。
-9. **只有自测，没有第三方可复现的成绩。** 我们没有公开数据集上的结果 ——
-   所以「比别的工具准」这句话，现在**说不起**。
+1. **It blocks nothing.** If the agent never calls it and never goes through the proxy,
+   it sees nothing. It is observation, not a gateway.
+2. **"Invisible" comes in three kinds**, grouped in `warrantd status`: structurally
+   impossible / not built yet / your choice. Every "not built yet" carries a fix.
+   **Engineering debt never gets to hide inside the capability boundary.**
+3. **L3 is not full coverage.** It covers local files plus **proxy-configured** MCP servers.
+   Shell commands run directly, and servers that skip the proxy, are outside.
+4. **Directory fingerprints only go to C0.** They prove *that* a directory changed,
+   not *which* file became what.
+5. **It knows how many times, not what each time was.** File events count edits
+   (`event_counts`), but the intermediate contents are not stored — that would mean
+   keeping every diff, a different order of storage.
+6. **The network is only peer addresses.** It does not see payloads. That is packet
+   capture, and it is structurally out of scope.
+7. **Nothing while it is off.** If warrantd is not running, the world keeps changing;
+   the next run can only compare against the last snapshot. File events behave the same way.
+8. **No ledger lock on Linux yet.** Multi-process concurrent writes are unsafe there
+   (Windows uses exclusive open).
+9. **Self-tested only.** There are no results on a public dataset and no third-party
+   reproduction — so "more accurate than X" is a claim we **cannot make yet**.
 
-**以上九条，就是它此刻的真实边界。** 少说一条，它就变成了它要反对的那种东西。
-
----
-
-## 两条纪律
-
-1. **观测者自己也是被控对象。** 它的观测方式是一张封闭表，它自己的副作用必须申报，它改自己的配置也要留痕。
-2. **不返回判决。** 它只说「有几条独立证据、什么档位」，不说「对不对」。
-   判断留给调用者 —— 也省得再养一个更笨的裁判。
+**These nine are its real boundary right now.** Omit one, and it becomes the thing it opposes.
 
 ---
 
-## 目录
+## Two disciplines
+
+1. **The observer is also an observed object.** Its observation method is a closed table,
+   its own side effects must be declared, and changes to its own config are recorded.
+2. **It returns no verdict.** It says *how many independent channels* and *what tier* —
+   never *whether it was right*. Judgement stays with the caller.
+
+---
+
+## Layout
 
 ```
-crates/warrant/     认定内核（纯库，只依赖 sha2 / unicode-normalization / ed25519-dalek / p256）
-  SPEC.md           规范：什么算发生过
-  PROTOCOL.md       协议：凭什么算够格
-  ADAPTER.md        适配器契约
-  vectors/          一致性测试向量（C1–C13）
-crates/warrantd/    常驻观测者（本仓的主体）
+crates/warrant/     attestation core (pure library: sha2 / unicode-normalization / ed25519-dalek / p256)
+  SPEC.md           what counts as having happened
+  PROTOCOL.md       what counts as sufficient evidence
+  ADAPTER.md        adapter contract
+  vectors/          conformance vectors (C1–C13)
+crates/warrantd/    the resident observer (this crate)
 ```
 
-## 许可
+## License
 
-**Apache-2.0**。见 `LICENSE` 与 `NOTICE`。
+**Apache-2.0.** See `LICENSE` and `NOTICE`.
 
-> 如果你用了它，**请在这个仓库开个 issue 说一声**（这不是法律要求，是请求）——
-> 知道谁在用，比多一颗 star 有用。
+> If you use it, **please open an issue and say so.** Not a legal requirement — a request.
+> Knowing who uses it is worth more than a star.
